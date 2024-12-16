@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry to KML Converter</title>
+    <style>
+        #polygon-list {
+            margin-top: 20px;
+        }
+        .polygon-item {
+            margin-bottom: 10px;
+        }
+        .polygon-item button {
+            margin-left: 10px;
+        }
+        #data-input, #filter-input {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Geometry to KML Converter</h1>
+    <p>Másold be a geometriai adatokat és azokat az elemeket, amelyeket hozzá szeretnél adni.</p>
+    
+    <textarea id="data-input" placeholder="Másold ide a JSON vagy TXT adatokat..."></textarea>
+    <br>
+    <button id="convert-button">Convert</button>
+    
+    <div id="polygon-list"></div>
+
+    <button id="export-button" style="display: none;">Export to KML</button>
+
+    <p id="status"></p>
+
+    <script>
+        const polygons = [];  // Tároljuk a poligonokat itt
+
+        document.getElementById('convert-button').addEventListener('click', () => {
+            const status = document.getElementById('status');
+            const dataInput = document.getElementById('data-input').value;
+            const filterInput = document.getElementById('filter-input').value;
+            status.textContent = "Processing...";
+
+            if (!dataInput) {
+                status.textContent = "Please paste the data!";
+                return;
+            }
+/*
+            if (!filterInput) {
+                status.textContent = "Please provide the list of items to include!";
+                return;
+            }*/
+
+            try {
+                const data = JSON.parse(dataInput);  // Próbáljuk JSON-ként feldolgozni
+                const filterList = filterInput.split('\n').map(item => item.trim()).filter(item => item !== "");
+
+                const newPolygons = [];
+
+                // Poligonok hozzáadása csak a szűrés alapján
+                data.discreteProducts.forEach(product => {
+                    const name = `${product.coveredItem.itemDescription}`;
+                    const coordinates = product.coveredItem.itemGeometry.coordinates[0][0]
+                        .map(coord => `${coord[0]},${coord[1]}`)
+                        .join(' ');
+
+                    //if (filterList.includes(name)) {
+                        newPolygons.push({ name, coordinates });
+                    //}
+                });
+
+                // Egyedi elemek kiválasztása
+                const uniquePolygons = newPolygons.filter(
+                    newPolygon => !polygons.some(
+                        existingPolygon =>
+                            existingPolygon.name === newPolygon.name &&
+                            existingPolygon.coordinates === newPolygon.coordinates
+                    )
+                );
+
+                // Az egyedi elemeket hozzáadjuk a fő tárolóhoz
+                polygons.push(...newPolygons);
+
+                status.textContent = `${newPolygons.length} new unique polygons added.`;
+
+                // Frissítjük a poligon lista megjelenítését
+                updatePolygonList();
+
+                // Ha van legalább egy poligon, megjelenítjük az export gombot
+                if (polygons.length > 0) {
+                    document.getElementById('export-button').style.display = 'inline';
+                }
+            } catch (error) {
+                console.error(error);
+                status.textContent = "Error processing the data. Please ensure it is valid JSON.";
+            }
+        });
+
+        document.getElementById('export-button').addEventListener('click', () => {
+            const kmlContent = generateKML(polygons);
+            const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
+            const url = URL.createObjectURL(blob);
+
+            // KML fájl letöltése
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'export.kml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        function updatePolygonList() {
+            const listContainer = document.getElementById('polygon-list');
+            listContainer.innerHTML = '';  // Töröljük az előző listát
+
+            polygons.forEach((polygon, index) => {
+                const div = document.createElement('div');
+                div.classList.add('polygon-item');
+                div.innerHTML = `${polygon.name} <button onclick="removePolygon(${index})">Remove</button>`;
+                listContainer.appendChild(div);
+            });
+        }
+
+        function removePolygon(index) {
+            polygons.splice(index, 1);  // Eltávolítjuk a poligont
+            updatePolygonList();  // Frissítjük a listát
+
+            // Ha nincs több poligon, elrejtjük az export gombot
+            if (polygons.length === 0) {
+                document.getElementById('export-button').style.display = 'none';
+            }
+        }
+
+        function generateKML(polygons) {
+            let kml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+            kml += `<kml xmlns="http://www.opengis.net/kml/2.2">\n`;
+            kml += `  <Document>\n`;
+
+            polygons.forEach(polygon => {
+                const { name, coordinates } = polygon;
+                kml += `    <Placemark>\n`;
+                kml += `      <name>${name}</name>\n`;
+                kml += `      <Polygon>\n`;
+                kml += `        <outerBoundaryIs>\n`;
+                kml += `          <LinearRing>\n`;
+                kml += `            <coordinates>${coordinates}</coordinates>\n`;
+                kml += `          </LinearRing>\n`;
+                kml += `        </outerBoundaryIs>\n`;
+                kml += `      </Polygon>\n`;
+                kml += `    </Placemark>\n`;
+            });
+
+            kml += `  </Document>\n`;
+            kml += `</kml>\n`;
+            return kml;
+        }
+    </script>
+</body>
+</html>
