@@ -416,21 +416,34 @@
             margin-right: 8px;
         }
         
-        .position-status.active {
+        .position-status.high-accuracy {
             background-color: #2ecc71;
             box-shadow: 0 0 8px #2ecc71;
+            animation: pulse-high 1s infinite;
+        }
+        
+        .position-status.medium-accuracy {
+            background-color: #f39c12;
+            box-shadow: 0 0 6px #f39c12;
+            animation: pulse-medium 1s infinite;
+        }
+        
+        .position-status.low-accuracy {
+            background-color: #e74c3c;
+            box-shadow: 0 0 4px #e74c3c;
         }
         
         .position-status.inactive {
-            background-color: #e74c3c;
+            background-color: #95a5a6;
         }
         
-        .position-status.waiting {
-            background-color: #f39c12;
-            animation: pulse 0.5s infinite;
+        @keyframes pulse-high {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
         }
         
-        @keyframes pulse {
+        @keyframes pulse-medium {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
@@ -446,44 +459,90 @@
             border-radius: 4px;
         }
         
-        /* Frissítési információk */
-        .performance-info {
+        /* Firefox specifikus beállítások */
+        .firefox-optimization {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8f4fc;
+            border-radius: 6px;
+            border: 1px solid #3498db;
             font-size: 0.85rem;
-            color: #7f8c8d;
+        }
+        
+        .firefox-optimization h4 {
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+        
+        .accuracy-indicator {
+            display: flex;
+            align-items: center;
             margin-top: 5px;
+        }
+        
+        .accuracy-bar {
+            flex: 1;
+            height: 8px;
+            background-color: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+        
+        .accuracy-fill {
+            height: 100%;
+            background-color: #2ecc71;
+            transition: width 0.5s;
+        }
+        
+        .accuracy-text {
+            font-weight: 600;
+            min-width: 60px;
+        }
+        
+        .high-accuracy-text {
+            color: #2ecc71;
+        }
+        
+        .medium-accuracy-text {
+            color: #f39c12;
+        }
+        
+        .low-accuracy-text {
+            color: #e74c3c;
+        }
+        
+        /* GPS típus jelző */
+        .gps-type {
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 5px;
+        }
+        
+        .gps-high {
+            background-color: #d5f4e6;
+            color: #27ae60;
+        }
+        
+        .gps-medium {
+            background-color: #fef9e7;
+            color: #f39c12;
+        }
+        
+        .gps-low {
+            background-color: #fadbd8;
+            color: #e74c3c;
+        }
+        
+        /* Böngésző infó */
+        .browser-info {
+            font-size: 0.8rem;
+            color: #7f8c8d;
             padding: 3px;
             background-color: #f8f9fa;
             border-radius: 3px;
-        }
-        
-        .update-rate {
-            color: #3498db;
-            font-weight: 600;
-        }
-        
-        /* Teljesítmény figyelés */
-        .performance-monitor {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-            font-size: 0.85rem;
-        }
-        
-        .performance-value {
-            font-weight: 600;
-            color: #3498db;
-        }
-        
-        .high-performance {
-            color: #2ecc71;
-            font-weight: 700;
-        }
-        
-        .low-performance {
-            color: #e74c3c;
-            font-weight: 700;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -557,37 +616,46 @@
                 <h2 class="section-title">Helyzet információk</h2>
                 <div class="location-info">
                     <div class="info-title">
-                        <span class="position-status waiting"></span>
+                        <span class="position-status inactive"></span>
                         <span>Jelenlegi pozíció</span>
+                        <span id="gpsTypeBadge" class="gps-type" style="display: none;">GPS</span>
                     </div>
-                    <div id="locationStatus" class="info-value">MAXIMUM GYORSASÁG MODE</div>
+                    <div id="locationStatus" class="info-value">Inicializálás...</div>
                     <div id="coordinates" class="info-value">-</div>
-                    <div id="accuracyInfo" class="info-value" style="font-size: 0.9rem; color: #6c757d;">Pontosság: -</div>
                     
-                    <div class="performance-monitor">
-                        <div class="info-title" style="font-size: 1rem;">
-                            <span class="icon">⚡</span>
-                            Teljesítmény monitor
+                    <div class="accuracy-indicator">
+                        <span>Pontosság:</span>
+                        <div class="accuracy-bar">
+                            <div id="accuracyFill" class="accuracy-fill" style="width: 0%"></div>
                         </div>
-                        <div id="updateRateInfo" class="performance-info">
-                            Frissítési ráta: <span class="update-rate" id="updateRate">0 Hz</span>
-                        </div>
-                        <div id="positionCountInfo" class="performance-info">
-                            Pozíció frissítések: <span class="performance-value" id="positionCount">0</span>
-                        </div>
-                        <div id="performanceStatus" class="performance-info high-performance">
-                            Állapot: <span id="statusText">Kiváló</span>
-                        </div>
-                        <div class="instructions" style="font-size: 0.8rem; margin-top: 5px;">
-                            <strong>MAXIMUM GYORSASÁG:</strong> Aggresszív frissítés, akkumulátorkímélés KI
-                        </div>
+                        <span id="accuracyText" class="accuracy-text">-</span>
+                    </div>
+                    
+                    <div id="browserInfo" class="browser-info">-</div>
+                    
+                    <!-- Firefox specifikus optimalizáció -->
+                    <div id="firefoxOptimization" class="firefox-optimization" style="display: none;">
+                        <h4>🔧 Firefox GPS Optimalizáció</h4>
+                        <p>Firefox alapértelmezetten csak hozzávetőleges pozíciót ad. Próbáljuk meg a következőket:</p>
+                        <ul style="margin-left: 15px; margin-top: 5px;">
+                            <li>Nyisd meg <strong>about:config</strong> és keresd: <em>geo.provider.network.url</em></li>
+                            <li>Állítsd <em>geo.enabled</em> értékét <strong>true</strong>-ra</li>
+                            <li>Próbáld ki a "GPS kényszerítése" gombot alul</li>
+                        </ul>
                     </div>
                     
                     <div id="positionError" class="error-message" style="display: none;"></div>
-                    <button id="resetPositionBtn" class="upload-btn" style="margin-top: 10px; padding: 0.6rem; font-size: 0.9rem; background-color: #e74c3c;">
-                        <span class="icon">⚡</span>
-                        MAXIMUM GYORSASÁG ÚJRAINDÍTÁS
-                    </button>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button id="forceGpsBtn" class="upload-btn" style="flex: 1; padding: 0.6rem; font-size: 0.9rem; background-color: #2ecc71;">
+                            <span class="icon">📡</span>
+                            GPS Kényszerítése
+                        </button>
+                        <button id="resetPositionBtn" class="upload-btn" style="flex: 1; padding: 0.6rem; font-size: 0.9rem; background-color: #3498db;">
+                            <span class="icon">🔄</span>
+                            Újraindítás
+                        </button>
+                    </div>
                 </div>
                 
                 <h2 class="section-title">Távolság mérés</h2>
@@ -644,7 +712,7 @@
                     <li>Vonal esetén: távolság a végtelenbe kiterjesztett egyenestől</li>
                     <li>Piros vonal: mérési vonal a helyzeted és a kiválasztott elem között</li>
                     <li>Szürke vonal: a kiterjesztett egyenes (100 méter mindkét irányba)</li>
-                    <li><strong>MAXIMUM GYORSASÁG:</strong> Aggresszív frissítés (akár 5+ Hz)</li>
+                    <li><strong>Firefox:</strong> Ha csak hozzávetőleges pozíciót kapsz, próbáld a "GPS Kényszerítése" gombot</li>
                     <li>A számítások 2D geometriai alapúak</li>
                 </ul>
             </div>
@@ -674,68 +742,92 @@
         let isFullscreen = false;
         let sidebarVisible = true;
         let watchId = null; // Geolocation watch ID
-        let highPerformanceWatchId = null; // Aggresszív watch ID
-        let positionUpdateCount = 0;
-        let lastPositionTime = 0;
-        let positionTimes = []; // Az utolsó 10 frissítés időpontjai
-        let updateRate = 0;
+        let forceGpsMode = false; // GPS kényszerítés mód
+        let isFirefox = false;
+        let accuracyHistory = []; // Pontosság előzmények
         
-        // Teljesítmény monitor frissítése
-        function updatePerformanceMonitor() {
-            const now = Date.now();
+        // Böngésző detektálás
+        function detectBrowser() {
+            const userAgent = navigator.userAgent;
             
-            // Tartsd csak az utolsó 10 másodperc adatait
-            positionTimes = positionTimes.filter(time => now - time < 10000);
-            
-            // Számítsd ki a frissítési rátaát
-            if (positionTimes.length > 1) {
-                const timeSpan = (positionTimes[positionTimes.length - 1] - positionTimes[0]) / 1000;
-                if (timeSpan > 0) {
-                    updateRate = (positionTimes.length - 1) / timeSpan;
-                }
-            }
-            
-            // Frissítsd a felületet
-            document.getElementById('updateRate').textContent = `${updateRate.toFixed(1)} Hz`;
-            document.getElementById('positionCount').textContent = positionUpdateCount;
-            
-            // Állapot értékelés
-            const statusElement = document.getElementById('statusText');
-            const performanceElement = document.getElementById('performanceStatus');
-            
-            if (updateRate >= 4) {
-                statusElement.textContent = "Kiváló (5+ Hz)";
-                performanceElement.className = "performance-info high-performance";
-                performanceElement.innerHTML = 'Állapot: <span id="statusText">Kiváló (5+ Hz)</span>';
-            } else if (updateRate >= 2) {
-                statusElement.textContent = "Jó (2-4 Hz)";
-                performanceElement.className = "performance-info";
-                performanceElement.innerHTML = 'Állapot: <span id="statusText">Jó (2-4 Hz)</span>';
-            } else if (updateRate >= 1) {
-                statusElement.textContent = "Átlagos (1-2 Hz)";
-                performanceElement.className = "performance-info";
-                performanceElement.innerHTML = 'Állapot: <span id="statusText">Átlagos (1-2 Hz)</span>';
+            if (userAgent.indexOf("Firefox") > -1) {
+                isFirefox = true;
+                document.getElementById('browserInfo').textContent = "Böngésző: Firefox";
+                document.getElementById('firefoxOptimization').style.display = 'block';
+                document.getElementById('locationStatus').textContent = "Firefox észlelve - GPS optimalizálás...";
+            } else if (userAgent.indexOf("Chrome") > -1) {
+                document.getElementById('browserInfo').textContent = "Böngésző: Chrome";
+                document.getElementById('locationStatus').textContent = "Chrome észlelve - Teljes GPS támogatás";
             } else {
-                statusElement.textContent = "Lassú (<1 Hz)";
-                performanceElement.className = "performance-info low-performance";
-                performanceElement.innerHTML = 'Állapot: <span id="statusText">Lassú (<1 Hz)</span>';
+                document.getElementById('browserInfo').textContent = `Böngésző: ${userAgent.split(' ')[0]}`;
             }
         }
         
-        // Pozíció állapot frissítése
-        function updatePositionStatus(status) {
+        // Pontosság állapot frissítése
+        function updateAccuracyStatus(accuracy) {
+            const accuracyFill = document.getElementById('accuracyFill');
+            const accuracyText = document.getElementById('accuracyText');
             const statusElement = document.querySelector('.position-status');
-            statusElement.classList.remove('active', 'inactive', 'waiting');
+            const gpsTypeBadge = document.getElementById('gpsTypeBadge');
             
-            if (status === 'active') {
-                statusElement.classList.add('active');
-                document.getElementById('locationStatus').textContent = "MAXIMUM GYORSASÁG AKTÍV";
-            } else if (status === 'inactive') {
-                statusElement.classList.add('inactive');
-                document.getElementById('locationStatus').textContent = "MAXIMUM GYORSASÁG INAKTÍV";
-            } else if (status === 'waiting') {
-                statusElement.classList.add('waiting');
-                document.getElementById('locationStatus').textContent = "MAXIMUM GYORSASÁG INDÍTÁS...";
+            // Tároljuk a pontosság előzményeket
+            accuracyHistory.push(accuracy);
+            if (accuracyHistory.length > 10) {
+                accuracyHistory.shift();
+            }
+            
+            // Átlagos pontosság számítása
+            const avgAccuracy = accuracyHistory.reduce((a, b) => a + b, 0) / accuracyHistory.length;
+            
+            // Pontosság százalék (0-100%, ahol 0 a legjobb)
+            let accuracyPercent;
+            if (accuracy <= 10) {
+                accuracyPercent = 100; // 0-10m = 100%
+            } else if (accuracy <= 50) {
+                accuracyPercent = 80; // 10-50m = 80%
+            } else if (accuracy <= 100) {
+                accuracyPercent = 60; // 50-100m = 60%
+            } else if (accuracy <= 500) {
+                accuracyPercent = 40; // 100-500m = 40%
+            } else {
+                accuracyPercent = 20; // 500m+ = 20%
+            }
+            
+            accuracyFill.style.width = `${accuracyPercent}%`;
+            accuracyText.textContent = `${accuracy.toFixed(1)} m`;
+            
+            // Állapotjelző frissítése
+            statusElement.classList.remove('high-accuracy', 'medium-accuracy', 'low-accuracy', 'inactive');
+            
+            if (accuracy <= 20) {
+                // Magas pontosság (GPS)
+                statusElement.classList.add('high-accuracy');
+                accuracyText.className = 'accuracy-text high-accuracy-text';
+                gpsTypeBadge.textContent = 'GPS';
+                gpsTypeBadge.className = 'gps-type gps-high';
+                gpsTypeBadge.style.display = 'inline';
+                document.getElementById('locationStatus').textContent = "Magas pontosságú GPS";
+            } else if (accuracy <= 100) {
+                // Közepes pontosság (WiFi/hálózat)
+                statusElement.classList.add('medium-accuracy');
+                accuracyText.className = 'accuracy-text medium-accuracy-text';
+                gpsTypeBadge.textContent = 'HÁLÓZAT';
+                gpsTypeBadge.className = 'gps-type gps-medium';
+                gpsTypeBadge.style.display = 'inline';
+                document.getElementById('locationStatus').textContent = "Közepes pontosság (hálózat)";
+            } else {
+                // Alacsony pontosság (cellás/becslés)
+                statusElement.classList.add('low-accuracy');
+                accuracyText.className = 'accuracy-text low-accuracy-text';
+                gpsTypeBadge.textContent = 'BECSLÉS';
+                gpsTypeBadge.className = 'gps-type gps-low';
+                gpsTypeBadge.style.display = 'inline';
+                document.getElementById('locationStatus').textContent = "Alacsony pontosság (becslés)";
+            }
+            
+            // Firefox specifikus javaslat
+            if (isFirefox && accuracy > 50) {
+                document.getElementById('firefoxOptimization').style.display = 'block';
             }
         }
         
@@ -751,121 +843,132 @@
             document.getElementById('positionError').style.display = 'none';
         }
         
-        // AGGRESSZÍV pozíció követés - MAXIMUM GYORSASÁG
-        function startAggressivePositionTracking() {
-            console.log("MAXIMUM GYORSASÁG pozíció követés indítása");
+        // Firefox GPS pontosság javító megoldás
+        function startFirefoxPositionTracking() {
+            console.log("Firefox GPS optimalizált követés indítása");
             
-            if (!navigator.geolocation) {
-                document.getElementById('locationStatus').textContent = "Böngésző nem támogatja";
-                updatePositionStatus('inactive');
-                showPositionError("A böngésző nem támogatja a helymeghatározást");
-                return;
-            }
-            
-            updatePositionStatus('waiting');
-            hidePositionError();
-            
-            // Állítsuk le a korábbi követést, ha van
-            stopPositionTracking();
-            
-            // Reset teljesítmény adatok
-            positionUpdateCount = 0;
-            positionTimes = [];
-            updateRate = 0;
-            
-            // 1. PRÓBÁLKOZÁS: EXTREME beállításokkal
+            // 1. PRÓBÁLKOZÁS: Extrém beállításokkal
             try {
-                highPerformanceWatchId = navigator.geolocation.watchPosition(
+                watchId = navigator.geolocation.watchPosition(
                     position => {
                         processPosition(position);
                     },
                     error => {
-                        console.warn("Extreme mód hiba, váltás agresszív módra", error);
-                        // Ha az extreme mód nem működik, próbáljunk agresszív módot
-                        startAggressiveFallback();
+                        handlePositionError(error);
+                        // Ha az extrém mód nem működik, próbáljunk normál módot
+                        if (isFirefox) {
+                            setTimeout(startNormalPositionTracking, 1000);
+                        }
                     },
                     {
                         enableHighAccuracy: true,
-                        maximumAge: 0, // ABSZOLÚT FRISS ADAT
-                        timeout: 500 // Csak 500ms timeout
+                        maximumAge: 0, // ABSZOLÚT FRISS
+                        timeout: 30000 // Hosszú timeout Firefox-nak
                     }
                 );
                 
-                // 5 másodperc múlva ellenőrizzük a teljesítményt
-                setTimeout(() => {
-                    if (positionUpdateCount < 3) {
-                        console.log("Extreme mód lassú, váltás agresszív módra");
-                        startAggressiveFallback();
-                    }
-                }, 5000);
+                // Extra: Kényszerített getCurrentPosition időnként
+                setInterval(() => {
+                    navigator.geolocation.getCurrentPosition(
+                        position => {
+                            processPosition(position);
+                        },
+                        error => console.log("Firefox polling hiba:", error),
+                        {
+                            enableHighAccuracy: true,
+                            maximumAge: 0,
+                            timeout: 10000
+                        }
+                    );
+                }, 2000); // 2 másodpercenként
                 
             } catch (error) {
-                console.error("Extreme mód hiba:", error);
-                startAggressiveFallback();
+                console.error("Firefox extrém mód hiba:", error);
+                startNormalPositionTracking();
             }
         }
         
-        // Agresszív fallback mód
-        function startAggressiveFallback() {
-            console.log("Agresszív fallback mód indítása");
+        // Normál pozíció követés
+        function startNormalPositionTracking() {
+            console.log("Normál pozíció követés indítása");
             
-            // Állítsuk le az extreme módot, ha fut
-            if (highPerformanceWatchId !== null) {
-                navigator.geolocation.clearWatch(highPerformanceWatchId);
-                highPerformanceWatchId = null;
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
             }
             
-            // Agresszív watchPosition
             watchId = navigator.geolocation.watchPosition(
                 position => {
                     processPosition(position);
                 },
-                error => {
-                    handlePositionError(error);
-                },
+                handlePositionError,
                 {
                     enableHighAccuracy: true,
-                    maximumAge: 100, // Maximum 100ms régi adat
-                    timeout: 1000 // 1 másodperc timeout
+                    maximumAge: 1000,
+                    timeout: 10000
                 }
             );
+        }
+        
+        // GPS kényszerítése (agresszív mód)
+        function forceGpsTracking() {
+            console.log("GPS KÉNYSZERÍTÉS aktiválva");
+            forceGpsMode = true;
             
-            // EXTRA: Kényszerített pollolás is, hogy biztosan kapjunk frissítést
-            const forcedPoll = setInterval(() => {
-                navigator.geolocation.getCurrentPosition(
+            // Állítsuk le a korábbi követést
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            
+            // Különböző beállításokkal próbálkozunk sorban
+            const gpsOptions = [
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }, // Extrém
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 }, // Még extrémebb
+                { enableHighAccuracy: false, maximumAge: 0, timeout: 30000 }, // Nem high accuracy
+            ];
+            
+            let attempt = 0;
+            
+            function tryNextOption() {
+                if (attempt >= gpsOptions.length) {
+                    console.log("Minden GPS opció kipróbálva, vissza normál mód");
+                    forceGpsMode = false;
+                    startNormalPositionTracking();
+                    return;
+                }
+                
+                const options = gpsOptions[attempt];
+                console.log(`GPS kényszerítés próba ${attempt + 1}:`, options);
+                
+                watchId = navigator.geolocation.watchPosition(
                     position => {
+                        console.log(`GPS kényszerítés ${attempt + 1} sikeres, pontosság: ${position.coords.accuracy}m`);
                         processPosition(position);
                     },
                     error => {
-                        // Csak naplózzuk, ne állítsuk le a pollolást
-                        console.log("Polling hiba:", error);
+                        console.log(`GPS kényszerítés ${attempt + 1} hiba:`, error);
+                        attempt++;
+                        setTimeout(tryNextOption, 1000);
                     },
-                    {
-                        enableHighAccuracy: true,
-                        maximumAge: 0,
-                        timeout: 2000
-                    }
+                    options
                 );
-            }, 200); // MÉG AGGESSZÍVABB: 200ms (5Hz)
+                
+                // 5 másodperc múlva ellenőrizzük
+                setTimeout(() => {
+                    if (userLatLng === null) {
+                        console.log(`GPS kényszerítés ${attempt + 1} időtúllépés`);
+                        navigator.geolocation.clearWatch(watchId);
+                        attempt++;
+                        tryNextOption();
+                    }
+                }, 5000);
+            }
             
-            // Tisztítás a következő indításkor
-            window.forcedPollInterval = forcedPoll;
+            tryNextOption();
         }
         
         // Pozíció feldolgozása
         function processPosition(position) {
-            updatePositionStatus('active');
-            positionUpdateCount++;
-            
-            const now = Date.now();
-            lastPositionTime = now;
-            positionTimes.push(now);
-            
-            // Túl régi időpontok eltávolítása
-            if (positionTimes.length > 100) {
-                positionTimes = positionTimes.slice(-100);
-            }
-            
             const newUserLatLng = [position.coords.latitude, position.coords.longitude];
             userLatLng = newUserLatLng;
             
@@ -873,10 +976,8 @@
             document.getElementById('coordinates').innerHTML = 
                 `<span class="highlight">${userLatLng[0].toFixed(6)}°, ${userLatLng[1].toFixed(6)}°</span>`;
             
-            // Pontosság információ
-            const accuracy = position.coords.accuracy;
-            document.getElementById('accuracyInfo').textContent = 
-                `Pontosság: ${accuracy ? accuracy.toFixed(1) + ' m' : 'ismeretlen'}`;
+            // Pontosság frissítése
+            updateAccuracyStatus(position.coords.accuracy);
             
             // Ha már van jelölő, mozgasd, különben hozz létre újat
             if (userMarker) {
@@ -891,8 +992,8 @@
                     })
                 }).addTo(map);
                 
-                // Adj tooltip-et a jelölőhöz
-                userMarker.bindTooltip("A te helyzeted (REALTIME)", {permanent: false, direction: 'top'}).openTooltip();
+                // Adj tooltip-et a jelölőhöz a pontossággal
+                userMarker.bindTooltip(`Pozíció (${position.coords.accuracy.toFixed(0)}m)`, {permanent: false, direction: 'top'}).openTooltip();
             }
             
             // Mindig frissítsd a mérést, ha van kiválasztott elem
@@ -901,23 +1002,19 @@
             }
             
             hidePositionError();
-            
-            // Teljesítmény monitor frissítése
-            updatePerformanceMonitor();
         }
         
         // Pozíció hiba kezelése
         function handlePositionError(error) {
             console.error("Helymeghatározási hiba:", error);
-            updatePositionStatus('inactive');
             
-            let errorMessage = "HIBA: ";
+            let errorMessage = "Hiba: ";
             switch(error.code) {
                 case error.PERMISSION_DENIED:
                     errorMessage += "Hozzáférés megtagadva. Engedélyezd a helymeghatározást!";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    errorMessage += "GPS nem elérhető. Kapcsold be a GPS-t!";
+                    errorMessage += "Helyinformáció nem elérhető. Ellenőrizd a GPS-t!";
                     break;
                 case error.TIMEOUT:
                     errorMessage += "Időtúllépés. Próbáld újra!";
@@ -927,9 +1024,15 @@
                     break;
             }
             
+            // Firefox specifikus javaslat
+            if (isFirefox && error.code === error.POSITION_UNAVAILABLE) {
+                errorMessage += "\n\nFirefox: Próbáld a 'GPS Kényszerítése' gombot, vagy ellenőrizd az about:config beállításokat.";
+            }
+            
             document.getElementById('locationStatus').textContent = "HIBA";
             document.getElementById('coordinates').textContent = "-";
-            document.getElementById('accuracyInfo').textContent = "Pontosság: -";
+            document.getElementById('accuracyFill').style.width = "0%";
+            document.getElementById('accuracyText').textContent = "-";
             
             showPositionError(errorMessage);
             
@@ -944,8 +1047,13 @@
                         iconAnchor: [13, 13]
                     })
                 }).addTo(map);
-                userMarker.bindTooltip("A te helyzeted (ALAPÉRTELMEZETT)", {permanent: false, direction: 'top'}).openTooltip();
+                userMarker.bindTooltip("Alapértelmezett pozíció", {permanent: false, direction: 'top'}).openTooltip();
             }
+            
+            const statusElement = document.querySelector('.position-status');
+            statusElement.classList.remove('high-accuracy', 'medium-accuracy', 'low-accuracy');
+            statusElement.classList.add('inactive');
+            document.getElementById('gpsTypeBadge').style.display = 'none';
         }
         
         // Pozíció követés leállítása
@@ -954,19 +1062,7 @@
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
             }
-            
-            if (highPerformanceWatchId !== null) {
-                navigator.geolocation.clearWatch(highPerformanceWatchId);
-                highPerformanceWatchId = null;
-            }
-            
-            if (window.forcedPollInterval) {
-                clearInterval(window.forcedPollInterval);
-                window.forcedPollInterval = null;
-            }
-            
-            positionUpdateCount = 0;
-            updatePositionStatus('inactive');
+            forceGpsMode = false;
         }
         
         // Teljes képernyős funkciók
@@ -1634,19 +1730,38 @@
         document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
         document.getElementById('headerToggleSidebarBtn').addEventListener('click', toggleSidebar);
         
-        // Pozíció frissítés gomb
+        // GPS kényszerítés gomb
+        document.getElementById('forceGpsBtn').addEventListener('click', function() {
+            console.log("GPS kényszerítés gomb megnyomva");
+            document.getElementById('locationStatus').textContent = "GPS kényszerítés aktiválva...";
+            forceGpsTracking();
+        });
+        
+        // Pozíció újraindítás gomb
         document.getElementById('resetPositionBtn').addEventListener('click', function() {
-            console.log("MAXIMUM GYORSASÁG ÚJRAINDÍTÁS");
+            console.log("Pozíció újraindítás");
             stopPositionTracking();
+            accuracyHistory = [];
             setTimeout(() => {
-                startAggressivePositionTracking();
+                if (isFirefox) {
+                    startFirefoxPositionTracking();
+                } else {
+                    startNormalPositionTracking();
+                }
             }, 100);
         });
         
         // Inicializálás
         document.addEventListener('DOMContentLoaded', function() {
-            // Indítsd el az AGGRESSZÍV helymeghatározást
-            startAggressivePositionTracking();
+            // Böngésző detektálás
+            detectBrowser();
+            
+            // Böngészőspecifikus pozíció követés indítása
+            if (isFirefox) {
+                startFirefoxPositionTracking();
+            } else {
+                startNormalPositionTracking();
+            }
             
             // Minta poligon betöltése a bemutatóhoz
             setTimeout(() => {
@@ -1682,9 +1797,6 @@
                 // Közelítés a poligonhoz
                 map.fitBounds(samplePolygon.getBounds().pad(0.2));
             }, 1000);
-            
-            // Teljesítmény monitor periodikus frissítése
-            setInterval(updatePerformanceMonitor, 1000);
         });
         
         // Az oldal bezárásakor állítsd le a pozíció követést
@@ -1711,11 +1823,12 @@
             // R billentyű a pozíció újraindításához
             if (e.key === 'r' || e.key === 'R') {
                 e.preventDefault();
-                console.log("R billentyű - MAXIMUM GYORSASÁG ÚJRAINDÍTÁS");
-                stopPositionTracking();
-                setTimeout(() => {
-                    startAggressivePositionTracking();
-                }, 100);
+                document.getElementById('resetPositionBtn').click();
+            }
+            // G billentyű a GPS kényszerítéshez
+            if (e.key === 'g' || e.key === 'G') {
+                e.preventDefault();
+                document.getElementById('forceGpsBtn').click();
             }
         });
         
@@ -1724,11 +1837,11 @@
             if (!document.hidden) {
                 // Ha az oldal újra láthatóvá válik, indítsuk újra a követést
                 setTimeout(() => {
-                    console.log("Oldal látható - MAXIMUM GYORSASÁG ÚJRAINDÍTÁS");
-                    stopPositionTracking();
-                    setTimeout(() => {
-                        startAggressivePositionTracking();
-                    }, 100);
+                    if (isFirefox) {
+                        startFirefoxPositionTracking();
+                    } else {
+                        startNormalPositionTracking();
+                    }
                 }, 500);
             }
         });
