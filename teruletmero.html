@@ -427,7 +427,7 @@
         
         .position-status.waiting {
             background-color: #f39c12;
-            animation: pulse 1.5s infinite;
+            animation: pulse 0.5s infinite;
         }
         
         @keyframes pulse {
@@ -446,62 +446,44 @@
             border-radius: 4px;
         }
         
-        /* Frissítési beállítások */
-        .refresh-settings {
+        /* Frissítési információk */
+        .performance-info {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+            padding: 3px;
+            background-color: #f8f9fa;
+            border-radius: 3px;
+        }
+        
+        .update-rate {
+            color: #3498db;
+            font-weight: 600;
+        }
+        
+        /* Teljesítmény figyelés */
+        .performance-monitor {
             margin-top: 10px;
             padding: 10px;
             background-color: #f8f9fa;
             border-radius: 6px;
             border: 1px solid #ddd;
+            font-size: 0.85rem;
         }
         
-        .refresh-slider-container {
-            margin-top: 10px;
-        }
-        
-        .refresh-slider {
-            width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: #ddd;
-            outline: none;
-            -webkit-appearance: none;
-        }
-        
-        .refresh-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #3498db;
-            cursor: pointer;
-        }
-        
-        .refresh-slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #3498db;
-            cursor: pointer;
-            border: none;
-        }
-        
-        .refresh-value {
-            text-align: center;
+        .performance-value {
             font-weight: 600;
             color: #3498db;
-            margin-top: 5px;
         }
         
-        /* Böngésző detektálás */
-        .browser-info {
-            font-size: 0.8rem;
-            color: #95a5a6;
-            margin-top: 5px;
-            padding: 3px;
-            background-color: #f8f9fa;
-            border-radius: 3px;
-            text-align: center;
+        .high-performance {
+            color: #2ecc71;
+            font-weight: 700;
+        }
+        
+        .low-performance {
+            color: #e74c3c;
+            font-weight: 700;
         }
     </style>
 </head>
@@ -578,30 +560,33 @@
                         <span class="position-status waiting"></span>
                         <span>Jelenlegi pozíció</span>
                     </div>
-                    <div id="locationStatus" class="info-value">Inicializálás...</div>
+                    <div id="locationStatus" class="info-value">MAXIMUM GYORSASÁG MODE</div>
                     <div id="coordinates" class="info-value">-</div>
                     <div id="accuracyInfo" class="info-value" style="font-size: 0.9rem; color: #6c757d;">Pontosság: -</div>
-                    <div id="browserInfo" class="browser-info">-</div>
                     
-                    <div class="refresh-settings">
-                        <div class="info-title">
-                            <span class="icon">⏱️</span>
-                            Frissítési gyakoriság
+                    <div class="performance-monitor">
+                        <div class="info-title" style="font-size: 1rem;">
+                            <span class="icon">⚡</span>
+                            Teljesítmény monitor
                         </div>
-                        <div class="refresh-slider-container">
-                            <input type="range" min="500" max="5000" value="1000" step="100" class="refresh-slider" id="refreshSlider">
-                            <div class="refresh-value" id="refreshValue">1.0 másodperc</div>
+                        <div id="updateRateInfo" class="performance-info">
+                            Frissítési ráta: <span class="update-rate" id="updateRate">0 Hz</span>
                         </div>
-                        <div class="instructions" style="font-size: 0.85rem; margin-top: 5px;">
-                            Alacsonyabb érték: gyorsabb frissítés (több akkumulátor)
-                            <br>Magasabb érték: lassabb frissítés (kevesebb akkumulátor)
+                        <div id="positionCountInfo" class="performance-info">
+                            Pozíció frissítések: <span class="performance-value" id="positionCount">0</span>
+                        </div>
+                        <div id="performanceStatus" class="performance-info high-performance">
+                            Állapot: <span id="statusText">Kiváló</span>
+                        </div>
+                        <div class="instructions" style="font-size: 0.8rem; margin-top: 5px;">
+                            <strong>MAXIMUM GYORSASÁG:</strong> Aggresszív frissítés, akkumulátorkímélés KI
                         </div>
                     </div>
                     
                     <div id="positionError" class="error-message" style="display: none;"></div>
-                    <button id="resetPositionBtn" class="upload-btn" style="margin-top: 10px; padding: 0.6rem; font-size: 0.9rem; background-color: #95a5a6;">
-                        <span class="icon">🔄</span>
-                        Pozíció frissítése
+                    <button id="resetPositionBtn" class="upload-btn" style="margin-top: 10px; padding: 0.6rem; font-size: 0.9rem; background-color: #e74c3c;">
+                        <span class="icon">⚡</span>
+                        MAXIMUM GYORSASÁG ÚJRAINDÍTÁS
                     </button>
                 </div>
                 
@@ -659,6 +644,7 @@
                     <li>Vonal esetén: távolság a végtelenbe kiterjesztett egyenestől</li>
                     <li>Piros vonal: mérési vonal a helyzeted és a kiválasztott elem között</li>
                     <li>Szürke vonal: a kiterjesztett egyenes (100 méter mindkét irányba)</li>
+                    <li><strong>MAXIMUM GYORSASÁG:</strong> Aggresszív frissítés (akár 5+ Hz)</li>
                     <li>A számítások 2D geometriai alapúak</li>
                 </ul>
             </div>
@@ -688,39 +674,52 @@
         let isFullscreen = false;
         let sidebarVisible = true;
         let watchId = null; // Geolocation watch ID
-        let positionWatchActive = false;
-        let refreshInterval = null; // Polling interval ID
-        let currentRefreshRate = 1000; // Alapértelmezett: 1 másodperc
-        let browserName = "Ismeretlen";
-        let lastPositionTime = 0;
+        let highPerformanceWatchId = null; // Aggresszív watch ID
         let positionUpdateCount = 0;
+        let lastPositionTime = 0;
+        let positionTimes = []; // Az utolsó 10 frissítés időpontjai
+        let updateRate = 0;
         
-        // Böngésző detektálás
-        function detectBrowser() {
-            const userAgent = navigator.userAgent;
+        // Teljesítmény monitor frissítése
+        function updatePerformanceMonitor() {
+            const now = Date.now();
             
-            if (userAgent.indexOf("Firefox") > -1) {
-                browserName = "Firefox";
-                // Firefox esetén gyakoribb pollolást használjunk
-                currentRefreshRate = 2000; // 2 másodperc alapértelmezett
-                document.getElementById('refreshSlider').value = 2000;
-                document.getElementById('refreshValue').textContent = "2.0 másodperc";
-            } else if (userAgent.indexOf("Chrome") > -1) {
-                browserName = "Chrome";
-                currentRefreshRate = 1000; // 1 másodperc alapértelmezett
-            } else if (userAgent.indexOf("Safari") > -1) {
-                browserName = "Safari";
-                currentRefreshRate = 2000; // 2 másodperc alapértelmezett
-                document.getElementById('refreshSlider').value = 2000;
-                document.getElementById('refreshValue').textContent = "2.0 másodperc";
-            } else if (userAgent.indexOf("Edge") > -1) {
-                browserName = "Edge";
-                currentRefreshRate = 1000; // 1 másodperc alapértelmezett
-            } else {
-                browserName = "Egyéb böngésző";
+            // Tartsd csak az utolsó 10 másodperc adatait
+            positionTimes = positionTimes.filter(time => now - time < 10000);
+            
+            // Számítsd ki a frissítési rátaát
+            if (positionTimes.length > 1) {
+                const timeSpan = (positionTimes[positionTimes.length - 1] - positionTimes[0]) / 1000;
+                if (timeSpan > 0) {
+                    updateRate = (positionTimes.length - 1) / timeSpan;
+                }
             }
             
-            document.getElementById('browserInfo').textContent = `Böngésző: ${browserName}`;
+            // Frissítsd a felületet
+            document.getElementById('updateRate').textContent = `${updateRate.toFixed(1)} Hz`;
+            document.getElementById('positionCount').textContent = positionUpdateCount;
+            
+            // Állapot értékelés
+            const statusElement = document.getElementById('statusText');
+            const performanceElement = document.getElementById('performanceStatus');
+            
+            if (updateRate >= 4) {
+                statusElement.textContent = "Kiváló (5+ Hz)";
+                performanceElement.className = "performance-info high-performance";
+                performanceElement.innerHTML = 'Állapot: <span id="statusText">Kiváló (5+ Hz)</span>';
+            } else if (updateRate >= 2) {
+                statusElement.textContent = "Jó (2-4 Hz)";
+                performanceElement.className = "performance-info";
+                performanceElement.innerHTML = 'Állapot: <span id="statusText">Jó (2-4 Hz)</span>';
+            } else if (updateRate >= 1) {
+                statusElement.textContent = "Átlagos (1-2 Hz)";
+                performanceElement.className = "performance-info";
+                performanceElement.innerHTML = 'Állapot: <span id="statusText">Átlagos (1-2 Hz)</span>';
+            } else {
+                statusElement.textContent = "Lassú (<1 Hz)";
+                performanceElement.className = "performance-info low-performance";
+                performanceElement.innerHTML = 'Állapot: <span id="statusText">Lassú (<1 Hz)</span>';
+            }
         }
         
         // Pozíció állapot frissítése
@@ -730,13 +729,13 @@
             
             if (status === 'active') {
                 statusElement.classList.add('active');
-                document.getElementById('locationStatus').textContent = "Aktív követés";
+                document.getElementById('locationStatus').textContent = "MAXIMUM GYORSASÁG AKTÍV";
             } else if (status === 'inactive') {
                 statusElement.classList.add('inactive');
-                document.getElementById('locationStatus').textContent = "Inaktív";
+                document.getElementById('locationStatus').textContent = "MAXIMUM GYORSASÁG INAKTÍV";
             } else if (status === 'waiting') {
                 statusElement.classList.add('waiting');
-                document.getElementById('locationStatus').textContent = "Várakozás...";
+                document.getElementById('locationStatus').textContent = "MAXIMUM GYORSASÁG INDÍTÁS...";
             }
         }
         
@@ -752,10 +751,12 @@
             document.getElementById('positionError').style.display = 'none';
         }
         
-        // Hibrid pozíció frissítési stratégia
-        function startHybridPositionTracking() {
+        // AGGRESSZÍV pozíció követés - MAXIMUM GYORSASÁG
+        function startAggressivePositionTracking() {
+            console.log("MAXIMUM GYORSASÁG pozíció követés indítása");
+            
             if (!navigator.geolocation) {
-                document.getElementById('locationStatus').textContent = "A böngésző nem támogatja a helymeghatározást";
+                document.getElementById('locationStatus').textContent = "Böngésző nem támogatja";
                 updatePositionStatus('inactive');
                 showPositionError("A böngésző nem támogatja a helymeghatározást");
                 return;
@@ -767,106 +768,103 @@
             // Állítsuk le a korábbi követést, ha van
             stopPositionTracking();
             
-            // 1. Próbáljuk meg a watchPosition API-t (legjobb, ha működik)
-            tryWatchPosition();
+            // Reset teljesítmény adatok
+            positionUpdateCount = 0;
+            positionTimes = [];
+            updateRate = 0;
             
-            // 2. Ha a watchPosition nem működik jól, váltunk polling-ra
-            setTimeout(() => {
-                if (!positionWatchActive) {
-                    console.log("WatchPosition nem aktív, váltás polling-ra");
-                    startPollingPosition();
-                }
-            }, 3000); // 3 másodperc várakozás
-        }
-        
-        // WatchPosition API próbálkozás
-        function tryWatchPosition() {
-            watchId = navigator.geolocation.watchPosition(
-                position => {
-                    positionWatchActive = true;
-                    updatePositionStatus('active');
-                    processPosition(position);
-                },
-                error => {
-                    positionWatchActive = false;
-                    updatePositionStatus('inactive');
-                    handlePositionError(error);
-                    
-                    // Ha a watchPosition hibázik, próbáljunk polling-ot
-                    if (!refreshInterval) {
-                        startPollingPosition();
-                    }
-                },
-                {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 10000
-                }
-            );
-        }
-        
-        // Polling alapú pozíció frissítés (alternatív megoldás)
-        function startPollingPosition() {
-            console.log("Polling alapú pozíció frissítés indítása");
-            
-            // Állítsuk le a watchPosition-t, ha fut
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-            }
-            
-            // Állítsuk le a korábbi polling-ot, ha fut
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
-            
-            // Indítsuk el a polling-ot
-            refreshInterval = setInterval(() => {
-                navigator.geolocation.getCurrentPosition(
+            // 1. PRÓBÁLKOZÁS: EXTREME beállításokkal
+            try {
+                highPerformanceWatchId = navigator.geolocation.watchPosition(
                     position => {
-                        positionWatchActive = true;
-                        updatePositionStatus('active');
                         processPosition(position);
                     },
                     error => {
-                        positionWatchActive = false;
-                        updatePositionStatus('inactive');
-                        handlePositionError(error);
+                        console.warn("Extreme mód hiba, váltás agresszív módra", error);
+                        // Ha az extreme mód nem működik, próbáljunk agresszív módot
+                        startAggressiveFallback();
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 0, // ABSZOLÚT FRISS ADAT
+                        timeout: 500 // Csak 500ms timeout
+                    }
+                );
+                
+                // 5 másodperc múlva ellenőrizzük a teljesítményt
+                setTimeout(() => {
+                    if (positionUpdateCount < 3) {
+                        console.log("Extreme mód lassú, váltás agresszív módra");
+                        startAggressiveFallback();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                console.error("Extreme mód hiba:", error);
+                startAggressiveFallback();
+            }
+        }
+        
+        // Agresszív fallback mód
+        function startAggressiveFallback() {
+            console.log("Agresszív fallback mód indítása");
+            
+            // Állítsuk le az extreme módot, ha fut
+            if (highPerformanceWatchId !== null) {
+                navigator.geolocation.clearWatch(highPerformanceWatchId);
+                highPerformanceWatchId = null;
+            }
+            
+            // Agresszív watchPosition
+            watchId = navigator.geolocation.watchPosition(
+                position => {
+                    processPosition(position);
+                },
+                error => {
+                    handlePositionError(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 100, // Maximum 100ms régi adat
+                    timeout: 1000 // 1 másodperc timeout
+                }
+            );
+            
+            // EXTRA: Kényszerített pollolás is, hogy biztosan kapjunk frissítést
+            const forcedPoll = setInterval(() => {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        processPosition(position);
+                    },
+                    error => {
+                        // Csak naplózzuk, ne állítsuk le a pollolást
+                        console.log("Polling hiba:", error);
                     },
                     {
                         enableHighAccuracy: true,
                         maximumAge: 0,
-                        timeout: 5000
+                        timeout: 2000
                     }
                 );
-            }, currentRefreshRate);
+            }, 200); // MÉG AGGESSZÍVABB: 200ms (5Hz)
             
-            // Azonnal kérjünk egy pozíciót is
-            navigator.geolocation.getCurrentPosition(
-                position => {
-                    positionWatchActive = true;
-                    updatePositionStatus('active');
-                    processPosition(position);
-                },
-                error => {
-                    positionWatchActive = false;
-                    updatePositionStatus('inactive');
-                    handlePositionError(error);
-                },
-                {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 5000
-                }
-            );
+            // Tisztítás a következő indításkor
+            window.forcedPollInterval = forcedPoll;
         }
         
         // Pozíció feldolgozása
         function processPosition(position) {
-            const now = Date.now();
-            const timeSinceLastUpdate = now - lastPositionTime;
-            lastPositionTime = now;
+            updatePositionStatus('active');
             positionUpdateCount++;
+            
+            const now = Date.now();
+            lastPositionTime = now;
+            positionTimes.push(now);
+            
+            // Túl régi időpontok eltávolítása
+            if (positionTimes.length > 100) {
+                positionTimes = positionTimes.slice(-100);
+            }
             
             const newUserLatLng = [position.coords.latitude, position.coords.longitude];
             userLatLng = newUserLatLng;
@@ -894,7 +892,7 @@
                 }).addTo(map);
                 
                 // Adj tooltip-et a jelölőhöz
-                userMarker.bindTooltip("A te helyzeted", {permanent: false, direction: 'top'}).openTooltip();
+                userMarker.bindTooltip("A te helyzeted (REALTIME)", {permanent: false, direction: 'top'}).openTooltip();
             }
             
             // Mindig frissítsd a mérést, ha van kiválasztott elem
@@ -903,29 +901,33 @@
             }
             
             hidePositionError();
+            
+            // Teljesítmény monitor frissítése
+            updatePerformanceMonitor();
         }
         
         // Pozíció hiba kezelése
         function handlePositionError(error) {
             console.error("Helymeghatározási hiba:", error);
+            updatePositionStatus('inactive');
             
-            let errorMessage = "Hiba a helymeghatározásban: ";
+            let errorMessage = "HIBA: ";
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    errorMessage += "Hozzáférés megtagadva. Engedélyezd a helymeghatározást a böngésző beállításaiban.";
+                    errorMessage += "Hozzáférés megtagadva. Engedélyezd a helymeghatározást!";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    errorMessage += "Helyinformáció nem elérhető.";
+                    errorMessage += "GPS nem elérhető. Kapcsold be a GPS-t!";
                     break;
                 case error.TIMEOUT:
-                    errorMessage += "Időtúllépés a helymeghatározás során.";
+                    errorMessage += "Időtúllépés. Próbáld újra!";
                     break;
                 default:
                     errorMessage += "Ismeretlen hiba.";
                     break;
             }
             
-            document.getElementById('locationStatus').textContent = "Hiba";
+            document.getElementById('locationStatus').textContent = "HIBA";
             document.getElementById('coordinates').textContent = "-";
             document.getElementById('accuracyInfo').textContent = "Pontosság: -";
             
@@ -942,7 +944,7 @@
                         iconAnchor: [13, 13]
                     })
                 }).addTo(map);
-                userMarker.bindTooltip("A te helyzeted (alapértelmezett)", {permanent: false, direction: 'top'}).openTooltip();
+                userMarker.bindTooltip("A te helyzeted (ALAPÉRTELMEZETT)", {permanent: false, direction: 'top'}).openTooltip();
             }
         }
         
@@ -953,25 +955,18 @@
                 watchId = null;
             }
             
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-                refreshInterval = null;
+            if (highPerformanceWatchId !== null) {
+                navigator.geolocation.clearWatch(highPerformanceWatchId);
+                highPerformanceWatchId = null;
             }
             
-            positionWatchActive = false;
+            if (window.forcedPollInterval) {
+                clearInterval(window.forcedPollInterval);
+                window.forcedPollInterval = null;
+            }
+            
+            positionUpdateCount = 0;
             updatePositionStatus('inactive');
-        }
-        
-        // Frissítési gyakoriság beállítása
-        function setRefreshRate(rate) {
-            currentRefreshRate = rate;
-            const seconds = rate / 1000;
-            document.getElementById('refreshValue').textContent = `${seconds.toFixed(1)} másodperc`;
-            
-            // Ha polling módban vagyunk, indítsuk újra az új gyakorisággal
-            if (refreshInterval) {
-                startPollingPosition();
-            }
         }
         
         // Teljes képernyős funkciók
@@ -1641,23 +1636,17 @@
         
         // Pozíció frissítés gomb
         document.getElementById('resetPositionBtn').addEventListener('click', function() {
+            console.log("MAXIMUM GYORSASÁG ÚJRAINDÍTÁS");
             stopPositionTracking();
-            startHybridPositionTracking();
-        });
-        
-        // Frissítési sáv eseménykezelő
-        document.getElementById('refreshSlider').addEventListener('input', function(e) {
-            const value = parseInt(e.target.value);
-            setRefreshRate(value);
+            setTimeout(() => {
+                startAggressivePositionTracking();
+            }, 100);
         });
         
         // Inicializálás
         document.addEventListener('DOMContentLoaded', function() {
-            // Böngésző detektálás
-            detectBrowser();
-            
-            // Indítsd el a hibrid helymeghatározást
-            startHybridPositionTracking();
+            // Indítsd el az AGGRESSZÍV helymeghatározást
+            startAggressivePositionTracking();
             
             // Minta poligon betöltése a bemutatóhoz
             setTimeout(() => {
@@ -1693,6 +1682,9 @@
                 // Közelítés a poligonhoz
                 map.fitBounds(samplePolygon.getBounds().pad(0.2));
             }, 1000);
+            
+            // Teljesítmény monitor periodikus frissítése
+            setInterval(updatePerformanceMonitor, 1000);
         });
         
         // Az oldal bezárásakor állítsd le a pozíció követést
@@ -1716,20 +1708,27 @@
                 e.preventDefault();
                 toggleSidebar();
             }
-            // R billentyű a pozíció frissítéséhez
+            // R billentyű a pozíció újraindításához
             if (e.key === 'r' || e.key === 'R') {
                 e.preventDefault();
+                console.log("R billentyű - MAXIMUM GYORSASÁG ÚJRAINDÍTÁS");
                 stopPositionTracking();
-                startHybridPositionTracking();
+                setTimeout(() => {
+                    startAggressivePositionTracking();
+                }, 100);
             }
         });
         
         // Oldal láthatóság változásakor is frissítsük a pozíciót
         document.addEventListener('visibilitychange', function() {
-            if (!document.hidden && !positionWatchActive) {
-                // Ha az oldal újra láthatóvá válik és a pozíció követés inaktív, indítsuk újra
+            if (!document.hidden) {
+                // Ha az oldal újra láthatóvá válik, indítsuk újra a követést
                 setTimeout(() => {
-                    startHybridPositionTracking();
+                    console.log("Oldal látható - MAXIMUM GYORSASÁG ÚJRAINDÍTÁS");
+                    stopPositionTracking();
+                    setTimeout(() => {
+                        startAggressivePositionTracking();
+                    }, 100);
                 }, 500);
             }
         });
