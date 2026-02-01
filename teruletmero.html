@@ -406,6 +406,45 @@
         .header-btn:hover {
             background-color: rgba(255, 255, 255, 0.3);
         }
+        
+        /* Pozíció állapot jelzők */
+        .position-status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .position-status.active {
+            background-color: #2ecc71;
+            box-shadow: 0 0 8px #2ecc71;
+        }
+        
+        .position-status.inactive {
+            background-color: #e74c3c;
+        }
+        
+        .position-status.waiting {
+            background-color: #f39c12;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* Hibaüzenetek */
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            padding: 5px;
+            background-color: rgba(231, 76, 60, 0.1);
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -478,12 +517,18 @@
                 <h2 class="section-title">Helyzet információk</h2>
                 <div class="location-info">
                     <div class="info-title">
-                        <span class="icon">📍</span>
-                        Jelenlegi pozíció
+                        <span class="position-status waiting"></span>
+                        <span>Jelenlegi pozíció</span>
                     </div>
-                    <div id="locationStatus" class="info-value">Meghatározás...</div>
+                    <div id="locationStatus" class="info-value">Inicializálás...</div>
                     <div id="coordinates" class="info-value">-</div>
-                    <div id="updateInfo" class="info-value" style="font-size: 0.9rem; color: #6c757d;">Frissítés: minden pozicionáláskor</div>
+                    <div id="accuracyInfo" class="info-value" style="font-size: 0.9rem; color: #6c757d;">Pontosság: -</div>
+                    <div id="updateInfo" class="info-value" style="font-size: 0.9rem; color: #6c757d;">Frissítés: valós idejű</div>
+                    <div id="positionError" class="error-message" style="display: none;"></div>
+                    <button id="resetPositionBtn" class="upload-btn" style="margin-top: 10px; padding: 0.6rem; font-size: 0.9rem; background-color: #95a5a6;">
+                        <span class="icon">🔄</span>
+                        Pozíció frissítése
+                    </button>
                 </div>
                 
                 <h2 class="section-title">Távolság mérés</h2>
@@ -566,9 +611,187 @@
         let extendedLine = null; // Kiterjesztett egyenes
         let lastClickedElement = null;
         let currentMode = 'all'; // 'all', 'corners', 'sides'
-        let locationUpdateInterval = null;
         let isFullscreen = false;
         let sidebarVisible = true;
+        let watchId = null; // Geolocation watch ID
+        let positionWatchActive = false;
+        
+        // Pozíció állapot frissítése
+        function updatePositionStatus(status) {
+            const statusElement = document.querySelector('.position-status');
+            statusElement.classList.remove('active', 'inactive', 'waiting');
+            
+            if (status === 'active') {
+                statusElement.classList.add('active');
+                document.getElementById('locationStatus').textContent = "Aktív követés";
+            } else if (status === 'inactive') {
+                statusElement.classList.add('inactive');
+                document.getElementById('locationStatus').textContent = "Inaktív";
+            } else if (status === 'waiting') {
+                statusElement.classList.add('waiting');
+                document.getElementById('locationStatus').textContent = "Várakozás...";
+            }
+        }
+        
+        // Hibaüzenet megjelenítése
+        function showPositionError(message) {
+            const errorElement = document.getElementById('positionError');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+        
+        // Hibaüzenet elrejtése
+        function hidePositionError() {
+            document.getElementById('positionError').style.display = 'none';
+        }
+        
+        // Felhasználó helymeghatározása - watchPosition API használata
+        function startPositionTracking() {
+            if (!navigator.geolocation) {
+                document.getElementById('locationStatus').textContent = "A böngésző nem támogatja a helymeghatározást";
+                updatePositionStatus('inactive');
+                showPositionError("A böngésző nem támogatja a helymeghatározást");
+                return;
+            }
+            
+            updatePositionStatus('waiting');
+            hidePositionError();
+            
+            // Először állítsuk le a korábbi követést, ha van
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            
+            // Kérjük a felhasználó engedélyét
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({name: 'geolocation'})
+                    .then(function(permissionStatus) {
+                        console.log('Geolocation permission status:', permissionStatus.state);
+                        
+                        if (permissionStatus.state === 'denied') {
+                            updatePositionStatus('inactive');
+                            showPositionError("A helymeghatározás letiltva. Engedélyezd a böngésző beállításaiban.");
+                            return;
+                        }
+                        
+                        // Indítsd el a pozíció követését
+                        startWatching();
+                    })
+                    .catch(function(error) {
+                        console.error('Permission query error:', error);
+                        // Ha a permissions API nem működik, próbáljuk meg azonnal
+                        startWatching();
+                    });
+            } else {
+                // Ha a permissions API nem elérhető, próbáljuk meg azonnal
+                startWatching();
+            }
+        }
+        
+        // Pozíció követés indítása
+        function startWatching() {
+            // WatchPosition API használata valós idejű frissítéshez
+            watchId = navigator.geolocation.watchPosition(
+                position => {
+                    positionWatchActive = true;
+                    updatePositionStatus('active');
+                    
+                    const newUserLatLng = [position.coords.latitude, position.coords.longitude];
+                    userLatLng = newUserLatLng;
+                    
+                    // Frissítsd a felhasználó helyzetét a felületen
+                    document.getElementById('coordinates').innerHTML = 
+                        `<span class="highlight">${userLatLng[0].toFixed(6)}°, ${userLatLng[1].toFixed(6)}°</span>`;
+                    
+                    // Pontosság információ
+                    const accuracy = position.coords.accuracy;
+                    document.getElementById('accuracyInfo').textContent = 
+                        `Pontosság: ${accuracy ? accuracy.toFixed(1) + ' m' : 'ismeretlen'}`;
+                    
+                    // Ha már van jelölő, mozgasd, különben hozz létre újat
+                    if (userMarker) {
+                        userMarker.setLatLng(userLatLng);
+                    } else {
+                        userMarker = L.marker(userLatLng, {
+                            icon: L.divIcon({
+                                className: 'user-location-icon',
+                                html: '<div style="background-color:#3498db;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>',
+                                iconSize: [26, 26],
+                                iconAnchor: [13, 13]
+                            })
+                        }).addTo(map);
+                        
+                        // Adj tooltip-et a jelölőhöz
+                        userMarker.bindTooltip("A te helyzeted", {permanent: false, direction: 'top'}).openTooltip();
+                    }
+                    
+                    // Mindig frissítsd a mérést, ha van kiválasztott elem
+                    if (lastClickedElement) {
+                        updateMeasurement(lastClickedElement);
+                    }
+                    
+                    hidePositionError();
+                },
+                error => {
+                    positionWatchActive = false;
+                    updatePositionStatus('inactive');
+                    
+                    console.error("Helymeghatározási hiba:", error);
+                    
+                    let errorMessage = "Hiba a helymeghatározásban: ";
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += "Hozzáférés megtagadva. Engedélyezd a helymeghatározást a böngésző beállításaiban.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += "Helyinformáció nem elérhető.";
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += "Időtúllépés a helymeghatározás során.";
+                            break;
+                        default:
+                            errorMessage += "Ismeretlen hiba.";
+                            break;
+                    }
+                    
+                    document.getElementById('locationStatus').textContent = "Hiba";
+                    document.getElementById('coordinates').textContent = "-";
+                    document.getElementById('accuracyInfo').textContent = "Pontosság: -";
+                    
+                    showPositionError(errorMessage);
+                    
+                    // Alapértelmezett pozíció (Budapest) beállítása hiba esetén
+                    if (!userLatLng) {
+                        userLatLng = [47.4979, 19.0402];
+                        userMarker = L.marker(userLatLng, {
+                            icon: L.divIcon({
+                                className: 'user-location-icon',
+                                html: '<div style="background-color:#3498db;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>',
+                                iconSize: [26, 26],
+                                iconAnchor: [13, 13]
+                            })
+                        }).addTo(map);
+                        userMarker.bindTooltip("A te helyzeted (alapértelmezett)", {permanent: false, direction: 'top'}).openTooltip();
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 0, // Mindig friss adatot kérünk
+                    timeout: 10000 // 10 másodperc timeout
+                }
+            );
+        }
+        
+        // Pozíció követés leállítása
+        function stopPositionTracking() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                positionWatchActive = false;
+                updatePositionStatus('inactive');
+            }
+        }
         
         // Teljes képernyős funkciók
         function toggleFullscreen() {
@@ -631,68 +854,6 @@
             setTimeout(() => {
                 map.invalidateSize();
             }, 100);
-        }
-        
-        // Felhasználó helymeghatározása
-        function locateUser() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    position => {
-                        userLatLng = [position.coords.latitude, position.coords.longitude];
-                        
-                        // Frissítsd a felhasználó helyzetét a felületen
-                        document.getElementById('locationStatus').textContent = "Meghatározva";
-                        document.getElementById('coordinates').innerHTML = 
-                            `<span class="highlight">${userLatLng[0].toFixed(6)}°, ${userLatLng[1].toFixed(6)}°</span>`;
-                        
-                        // Ha már van jelölő, mozgasd, különben hozz létre újat
-                        if (userMarker) {
-                            userMarker.setLatLng(userLatLng);
-                        } else {
-                            userMarker = L.marker(userLatLng, {
-                                icon: L.divIcon({
-                                    className: 'user-location-icon',
-                                    html: '<div style="background-color:#3498db;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>',
-                                    iconSize: [26, 26],
-                                    iconAnchor: [13, 13]
-                                })
-                            }).addTo(map);
-                            
-                            // Adj tooltip-et a jelölőhöz
-                            userMarker.bindTooltip("A te helyzeted", {permanent: false, direction: 'top'}).openTooltip();
-                        }
-                        
-                        // Mindig frissítsd a mérést, ha van kiválasztott elem
-                        if (lastClickedElement) {
-                            updateMeasurement(lastClickedElement);
-                        }
-                    },
-                    error => {
-                        console.error("Helymeghatározási hiba:", error);
-                        document.getElementById('locationStatus').textContent = "Hiba a helymeghatározásban";
-                        document.getElementById('coordinates').textContent = "Engedélyezd a helymeghatározást";
-                        
-                        // Alapértelmezett pozíció (Budapest) beállítása
-                        userLatLng = [47.4979, 19.0402];
-                        userMarker = L.marker(userLatLng, {
-                            icon: L.divIcon({
-                                className: 'user-location-icon',
-                                html: '<div style="background-color:#3498db;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>',
-                                iconSize: [26, 26],
-                                iconAnchor: [13, 13]
-                            })
-                        }).addTo(map);
-                        userMarker.bindTooltip("A te helyzeted (alapértelmezett)", {permanent: false, direction: 'top'}).openTooltip();
-                    },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 5000,
-                        maximumAge: 0
-                    }
-                );
-            } else {
-                document.getElementById('locationStatus').textContent = "A böngésző nem támogatja a helymeghatározást";
-            }
         }
         
         // Távolság számítása két pont között (2D síkban, egyszerűsítve)
@@ -1297,13 +1458,16 @@
         document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
         document.getElementById('headerToggleSidebarBtn').addEventListener('click', toggleSidebar);
         
+        // Pozíció frissítés gomb
+        document.getElementById('resetPositionBtn').addEventListener('click', function() {
+            stopPositionTracking();
+            startPositionTracking();
+        });
+        
         // Inicializálás
         document.addEventListener('DOMContentLoaded', function() {
             // Indítsd el a helymeghatározást
-            locateUser();
-            
-            // Állítsd be az automatikus frissítést 1 másodpercenként
-            locationUpdateInterval = setInterval(locateUser, 1000);
+            startPositionTracking();
             
             // Minta poligon betöltése a bemutatóhoz
             setTimeout(() => {
@@ -1341,11 +1505,9 @@
             }, 1000);
         });
         
-        // Az oldal bezárásakor állítsd le a frissítési időzítőt
+        // Az oldal bezárásakor állítsd le a pozíció követést
         window.addEventListener('beforeunload', function() {
-            if (locationUpdateInterval) {
-                clearInterval(locationUpdateInterval);
-            }
+            stopPositionTracking();
         });
         
         // Billentyűzet parancsok
@@ -1363,6 +1525,22 @@
             if (e.key === ' ') {
                 e.preventDefault();
                 toggleSidebar();
+            }
+            // R billentyű a pozíció frissítéséhez
+            if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                stopPositionTracking();
+                startPositionTracking();
+            }
+        });
+        
+        // Oldal láthatóság változásakor is frissítsük a pozíciót
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && !positionWatchActive) {
+                // Ha az oldal újra láthatóvá válik és a pozíció követés inaktív, indítsuk újra
+                setTimeout(() => {
+                    startPositionTracking();
+                }, 500);
             }
         });
     </script>
