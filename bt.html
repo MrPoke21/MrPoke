@@ -71,10 +71,6 @@
             gap: 10px;
         }
         
-        .card-title i {
-            font-size: 1.8rem;
-        }
-        
         .btn {
             display: inline-block;
             background: linear-gradient(to right, #4ecdc4, #44a08d);
@@ -114,6 +110,10 @@
         
         .btn-secondary {
             background: linear-gradient(to right, #6c757d, #5a6268);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(to right, #ffc107, #e0a800);
         }
         
         .data-display {
@@ -226,6 +226,33 @@
             margin-top: 10px;
         }
         
+        .device-list {
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+        }
+        
+        .device-item {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .device-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .device-item.selected {
+            background-color: rgba(78, 205, 196, 0.2);
+            border-left: 3px solid #4ecdc4;
+        }
+        
         footer {
             text-align: center;
             padding: 20px;
@@ -266,10 +293,6 @@
         .icon-gps {
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234ecdc4'%3E%3Cpath d='M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E");
         }
-        
-        .icon-map {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234ecdc4'%3E%3Cpath d='M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z'/%3E%3C/svg%3E");
-        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -277,17 +300,17 @@
     <div class="container">
         <header>
             <h1><span class="icon icon-bluetooth"></span> Bluetooth GPS Olvasó</h1>
-            <p class="subtitle">Csatlakoztass Bluetooth GPS eszközt, és olvasd ki a helymeghatározási adatokat közvetlenül a böngésződben. Az alkalmazás a Web Bluetooth API-t használja.</p>
+            <p class="subtitle">Csatlakozz Bluetooth GPS eszközhöz vagy bármely más Bluetooth eszközhöz a Web Bluetooth API segítségével</p>
         </header>
         
         <div class="status disconnected" id="connectionStatus">
-            <i class="fas fa-plug"></i> Nincs csatlakoztatva GPS eszköz
+            <i class="fas fa-plug"></i> Nincs csatlakoztatva Bluetooth eszköz
         </div>
         
         <div class="main-content">
             <div class="card">
                 <h2 class="card-title"><span class="icon icon-bluetooth"></span> Bluetooth Kapcsolat</h2>
-                <p>Csatlakozz Bluetooth GPS eszközhöz az alábbi gombra kattintva. A böngésződ megkérdezi, melyik eszközhöz szeretnél csatlakozni.</p>
+                <p>Válassz a felfedezett eszközök közül, vagy használj már párosított eszközt:</p>
                 
                 <div class="data-display">
                     <div class="data-item">
@@ -304,8 +327,15 @@
                     </div>
                 </div>
                 
-                <button class="btn" id="connectBtn">
-                    <i class="fas fa-bluetooth"></i> Csatlakozás GPS eszközhöz
+                <div class="device-list" id="deviceList">
+                    <!-- Eszközök listája jelenik meg itt -->
+                </div>
+                
+                <button class="btn" id="scanBtn">
+                    <i class="fas fa-search"></i> Bluetooth eszközök keresése
+                </button>
+                <button class="btn btn-warning" id="pairedBtn">
+                    <i class="fas fa-link"></i> Párosított eszköz használata
                 </button>
                 <button class="btn btn-secondary" id="disconnectBtn" disabled>
                     <i class="fas fa-ban"></i> Kapcsolat bontása
@@ -343,40 +373,39 @@
                         <span class="data-value" id="accuracy">-</span>
                     </div>
                     <div class="data-item">
-                        <span class="data-label">Műholdak száma:</span>
-                        <span class="data-value" id="satellites">-</span>
+                        <span class="data-label">Időbélyeg:</span>
+                        <span class="data-value" id="timestamp">-</span>
                     </div>
                 </div>
             </div>
         </div>
         
-        <div class="card">
-            <h2 class="card-title"><span class="icon icon-map"></span> Helyszín megjelenítése</h2>
-            <div class="map-container" id="mapContainer">
-                <div id="mapPlaceholder">
-                    <p><i class="fas fa-map-location-dot fa-3x" style="color: #4ecdc4; margin-bottom: 15px;"></i></p>
-                    <p>A térkép itt jelenik meg a GPS pozíció alapján</p>
-                    <p class="note">Megjegyzés: Valós alkalmazásban integrálható egy térképszolgáltatás (pl. Google Maps, OpenStreetMap)</p>
-                </div>
-            </div>
-        </div>
-        
         <div class="instructions">
-            <h3><i class="fas fa-info-circle"></i> Használati útmutató</h3>
+            <h3><i class="fas fa-info-circle"></i> Fontos tudnivalók a Web Bluetooth API-ról</h3>
             <ol>
-                <li>Ellenőrizd, hogy a Bluetooth GPS eszközöd be van kapcsolva és látható módban van</li>
-                <li>Kattints a "Csatlakozás GPS eszközhöz" gombra</li>
-                <li>A böngésző megjeleníti az elérhető Bluetooth eszközök listáját - válaszd ki a GPS eszközöd</li>
-                <li>Az alkalmazás megjeleníti a GPS adatokat, amint azok érkeznek</li>
-                <li>Ha nincs Bluetooth GPS eszközöd, használhatod a "Szimulált GPS adatok" gombot a teszteléshez</li>
+                <li><strong>Hogyan működik a böngésző Bluetooth támogatása?</strong>
+                    <p>A Web Bluetooth API nem listázza a párosított eszközöket. Ehelyett egy böngésző ablakban jeleníti meg az elérhető eszközöket, ahol manuálisan kell kiválasztani az eszközt.</p>
+                </li>
+                <li><strong>Lépések az eszköz csatlakoztatásához:</strong>
+                    <ol>
+                        <li>Kattints a "Bluetooth eszközök keresése" gombra</li>
+                        <li>A böngésző megjelenít egy párbeszédablakot az elérhető eszközökkel</li>
+                        <li>Válaszd ki a kívánt eszközt (lehet, hogy először párosítani kell)</li>
+                        <li>A böngésző megkérdezi, hogy engedélyezed-e a kapcsolódást</li>
+                    </ol>
+                </li>
+                <li><strong>Korlátozások:</strong>
+                    <ul>
+                        <li>Csak biztonságos kontextusban működik (HTTPS vagy localhost)</li>
+                        <li>Felhasználói interakció szükséges (nem indulhat automatikusan)</li>
+                        <li>Nem minden Bluetooth profil támogatott</li>
+                    </ul>
+                </li>
+                <li><strong>Támogatott böngészők:</strong> Chrome, Edge, Opera (teljes), Firefox, Safari (korlátozott)</li>
             </ol>
             
             <div class="warning">
-                <i class="fas fa-exclamation-triangle"></i> Fontos: A Web Bluetooth API-t nem minden böngésző támogatja teljes mértékben. Jelenleg a Chrome, Edge és Opera böngészők a legjobb kompatibilitást kínálják.
-            </div>
-            
-            <div class="note">
-                Megjegyzés: A valós GPS adatok olvasásához a Bluetooth eszköznek támogatnia kell a "Location and Navigation" szolgáltatást, és a böngészőnek képesnek kell lennie kommunikálni vele. Lehetséges, hogy egyes GPS eszközök nem kompatibilisek a Web Bluetooth API-val.
+                <i class="fas fa-exclamation-triangle"></i> Fontos: A Bluetooth GPS adatok olvasásához az eszköznek támogatnia kell a megfelelő GATT szolgáltatásokat. A szimulált mód segít tesztelni az alkalmazást, ha nincs kompatibilis GPS eszközöd.
             </div>
         </div>
         
@@ -388,10 +417,12 @@
 
     <script>
         // DOM elemek
-        const connectBtn = document.getElementById('connectBtn');
+        const scanBtn = document.getElementById('scanBtn');
+        const pairedBtn = document.getElementById('pairedBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
         const simulateBtn = document.getElementById('simulateBtn');
         const connectionStatus = document.getElementById('connectionStatus');
+        const deviceList = document.getElementById('deviceList');
         const deviceName = document.getElementById('deviceName');
         const deviceStatus = document.getElementById('deviceStatus');
         const lastUpdate = document.getElementById('lastUpdate');
@@ -401,29 +432,72 @@
         const altitude = document.getElementById('altitude');
         const speed = document.getElementById('speed');
         const accuracy = document.getElementById('accuracy');
-        const satellites = document.getElementById('satellites');
-        const mapContainer = document.getElementById('mapContainer');
-        const mapPlaceholder = document.getElementById('mapPlaceholder');
+        const timestamp = document.getElementById('timestamp');
         
         // Web Bluetooth változók
         let bluetoothDevice = null;
         let gattServer = null;
-        let gpsCharacteristic = null;
         let isConnected = false;
         let simulationInterval = null;
+        let discoveredDevices = [];
         
         // Web Bluetooth API támogatás ellenőrzése
         function checkBluetoothSupport() {
             if (!navigator.bluetooth) {
                 alert("A böngészője nem támogatja a Web Bluetooth API-t. Kérjük, használjon Chrome, Edge vagy Opera böngészőt.");
-                connectBtn.disabled = true;
+                scanBtn.disabled = true;
+                pairedBtn.disabled = true;
                 return false;
             }
+            
+            // Ellenőrizzük, hogy a böngészőben engedélyezve van-e a Bluetooth
+            navigator.bluetooth.getAvailability().then(available => {
+                if (!available) {
+                    console.log("Bluetooth nem elérhető ezen az eszközön");
+                }
+            });
+            
             return true;
         }
         
+        // Eszközök listájának frissítése
+        function updateDeviceList(devices) {
+            deviceList.innerHTML = '';
+            
+            if (devices.length === 0) {
+                deviceList.innerHTML = '<p style="text-align: center; padding: 20px;">Nincsenek felfedezett eszközök</p>';
+                return;
+            }
+            
+            devices.forEach(device => {
+                const deviceElement = document.createElement('div');
+                deviceElement.className = 'device-item';
+                deviceElement.innerHTML = `
+                    <strong>${device.name || 'Ismeretlen eszköz'}</strong>
+                    <div style="font-size: 0.8rem; margin-top: 5px;">
+                        ${device.id ? `ID: ${device.id.substring(0, 8)}...` : ''}
+                    </div>
+                `;
+                
+                deviceElement.addEventListener('click', () => {
+                    // Eltávolítjuk a korábbi kijelölést
+                    document.querySelectorAll('.device-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    
+                    // Kijelöljük az aktuálisat
+                    deviceElement.classList.add('selected');
+                    
+                    // Csatlakozás az eszközhöz
+                    connectToDevice(device);
+                });
+                
+                deviceList.appendChild(deviceElement);
+            });
+        }
+        
         // GPS adatok frissítése a felületen
-        function updateGPSData(lat, lon, alt, spd, acc, sat) {
+        function updateGPSData(lat, lon, alt, spd, acc) {
             // Koordináták formázása
             const latDirection = lat >= 0 ? 'É' : 'D';
             const lonDirection = lon >= 0 ? 'K' : 'Ny';
@@ -437,28 +511,11 @@
             altitude.textContent = alt !== null ? `${alt.toFixed(1)} m` : '-';
             speed.textContent = spd !== null ? `${(spd * 3.6).toFixed(1)} km/h` : '-';
             accuracy.textContent = acc !== null ? `${acc.toFixed(1)} m` : '-';
-            satellites.textContent = sat !== null ? sat : '-';
             
-            // Utolsó frissítés ideje
+            // Időbélyeg
             const now = new Date();
+            timestamp.textContent = now.toLocaleTimeString('hu-HU');
             lastUpdate.textContent = now.toLocaleTimeString('hu-HU');
-            
-            // Térkép frissítése (szimulált)
-            updateMap(lat, lon);
-        }
-        
-        // Térkép frissítése (szimulált - valós alkalmazásban valódi térképszolgáltatással)
-        function updateMap(lat, lon) {
-            // Valós alkalmazásban itt integrálnád a Google Maps vagy OpenStreetMap API-t
-            mapPlaceholder.innerHTML = `
-                <p><i class="fas fa-map-marked-alt fa-3x" style="color: #4ecdc4; margin-bottom: 15px;"></i></p>
-                <p style="font-weight: bold; font-size: 1.2rem;">Szimulált térkép megjelenítése</p>
-                <p>Pozíció: ${lat.toFixed(6)}°, ${lon.toFixed(6)}°</p>
-                <p class="note" style="margin-top: 15px;">Valós alkalmazásban itt jelenne meg a tényleges térkép a pozícióval</p>
-                <div style="margin-top: 15px; width: 100%; height: 150px; background: linear-gradient(to right, #1a5f7a, #4ecdc4); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                    <div style="width: 20px; height: 20px; background-color: #ff6b6b; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>
-                </div>
-            `;
         }
         
         // Kapcsolat állapotának frissítése
@@ -467,20 +524,23 @@
             
             if (connected) {
                 connectionStatus.className = 'status connected';
-                connectionStatus.innerHTML = `<i class="fas fa-link"></i> Csatlakozva: ${device ? device.name : 'GPS eszköz'}`;
-                connectBtn.disabled = true;
+                connectionStatus.innerHTML = `<i class="fas fa-link"></i> Csatlakozva: ${device ? device.name : 'Bluetooth eszköz'}`;
+                scanBtn.disabled = true;
+                pairedBtn.disabled = true;
                 disconnectBtn.disabled = false;
                 deviceStatus.textContent = 'Csatlakozva';
                 
                 if (device) {
-                    deviceName.textContent = device.name;
+                    deviceName.textContent = device.name || 'Ismeretlen eszköz';
                 }
             } else {
                 connectionStatus.className = 'status disconnected';
-                connectionStatus.innerHTML = '<i class="fas fa-unlink"></i> Nincs csatlakoztatva GPS eszköz';
-                connectBtn.disabled = false;
+                connectionStatus.innerHTML = '<i class="fas fa-unlink"></i> Nincs csatlakoztatva Bluetooth eszköz';
+                scanBtn.disabled = false;
+                pairedBtn.disabled = false;
                 disconnectBtn.disabled = true;
                 deviceStatus.textContent = 'Nem csatlakoztatva';
+                deviceName.textContent = '-';
                 
                 // GPS adatok visszaállítása alapértékekre
                 if (!simulationInterval) {
@@ -497,54 +557,46 @@
             altitude.textContent = '-';
             speed.textContent = '-';
             accuracy.textContent = '-';
-            satellites.textContent = '-';
+            timestamp.textContent = '-';
             lastUpdate.textContent = '-';
-            
-            mapPlaceholder.innerHTML = `
-                <p><i class="fas fa-map-location-dot fa-3x" style="color: #4ecdc4; margin-bottom: 15px;"></i></p>
-                <p>A térkép itt jelenik meg a GPS pozíció alapján</p>
-                <p class="note">Megjegyzés: Valós alkalmazásban integrálható egy térképszolgáltatás (pl. Google Maps, OpenStreetMap)</p>
-            `;
         }
         
-        // Bluetooth GPS eszköz csatlakoztatása
-        async function connectToGPSDevice() {
-            if (!checkBluetoothSupport()) return;
+        // Bluetooth eszköz csatlakoztatása
+        async function connectToDevice(device) {
+            if (!device) return;
             
             try {
                 connectionStatus.className = 'status scanning';
-                connectionStatus.innerHTML = '<i class="fas fa-search"></i> Bluetooth eszközök keresése...';
+                connectionStatus.innerHTML = '<i class="fas fa-sync fa-spin"></i> Kapcsolódás az eszközhöz...';
                 
-                // GPS szolgáltatások szűrője
-                // Valós alkalmazásban a megfelelő szolgáltatás UUID-ját kell használni
-                const options = {
-                    filters: [
-                        { namePrefix: 'GPS' },
-                        { namePrefix: 'gps' },
-                        { services: ['location_and_navigation'] }
-                    ],
-                    optionalServices: ['battery_service', 'device_information']
-                };
+                // Kapcsolódás az eszközhöz
+                bluetoothDevice = device;
                 
-                // Bluetooth eszköz kiválasztása
-                bluetoothDevice = await navigator.bluetooth.requestDevice();
-                
-                // Eseménykezelők
+                // Eseménykezelő a kapcsolat megszakadásához
                 bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
                 
                 // Kapcsolódás a GATT szerverhez
-                connectionStatus.innerHTML = '<i class="fas fa-sync fa-spin"></i> Kapcsolódás az eszközhöz...';
                 gattServer = await bluetoothDevice.gatt.connect();
-                
-                // Valós GPS szolgáltatás és karakterisztika lekérése
-                // Megjegyzés: A Web Bluetooth API korlátozott GPS támogatással rendelkezik
-                // Valós alkalmazásban ismerni kell a GPS eszköz szolgáltatásának UUID-ját
                 
                 updateConnectionStatus(true, bluetoothDevice);
                 
-                // Szimulált GPS adatok olvasása (mivel a valós GPS eszközök nem mindig kompatibilisek)
-                // Valós alkalmazásban itt feliratkoznál a GPS adatokra
+                // Mivel a valódi GPS adatok olvasása komplex, itt szimuláljuk
+                // Valós alkalmazásban itt kellene feliratkozni a GPS szolgáltatásra
+                console.log('Sikeresen csatlakozva:', bluetoothDevice);
+                
+                // Szimulált GPS adatok indítása (mivel a valós GPS eszközök nem mindig kompatibilisek)
                 startGPSSimulation();
+                
+                // Próbáljuk meg lekérni az alapvető eszköz információkat
+                try {
+                    const deviceInfoService = await gattServer.getPrimaryService('device_information');
+                    const modelNumberChar = await deviceInfoService.getCharacteristic('model_number_string');
+                    const modelNumberValue = await modelNumberChar.readValue();
+                    const modelNumber = new TextDecoder().decode(modelNumberValue);
+                    console.log('Eszköz modell száma:', modelNumber);
+                } catch (e) {
+                    console.log('Eszköz információk nem elérhetők:', e.message);
+                }
                 
             } catch (error) {
                 console.error('Hiba a csatlakozás során:', error);
@@ -554,9 +606,76 @@
             }
         }
         
+        // Bluetooth eszközök keresése
+        async function scanForDevices() {
+            if (!checkBluetoothSupport()) return;
+            
+            try {
+                connectionStatus.className = 'status scanning';
+                connectionStatus.innerHTML = '<i class="fas fa-search"></i> Bluetooth eszközök keresése...';
+                
+                // Kevesebb szűrő, hogy több eszköz jelenjen meg
+                const options = {
+                    // Opcionális szűrők - kommentálva, hogy minden eszköz megjelenjen
+                    // filters: [
+                    //     { services: ['battery_service'] }, // Akkumulátor szolgáltatás
+                    //     { name: 'GPS' }, // GPS nevű eszközök
+                    // ],
+                    acceptAllDevices: true, // Minden eszköz megjelenik
+                    optionalServices: ['battery_service', 'device_information'] // Opcionális szolgáltatások
+                };
+                
+                // Bluetooth eszköz kiválasztása - ez megnyitja a böngésző párbeszédablakát
+                bluetoothDevice = await navigator.bluetooth.requestDevice(options);
+                
+                // Ha sikeresen kiválasztottunk egy eszközt
+                if (bluetoothDevice) {
+                    discoveredDevices.push(bluetoothDevice);
+                    updateDeviceList(discoveredDevices);
+                    
+                    // Kapcsolódás az eszközhöz
+                    await connectToDevice(bluetoothDevice);
+                }
+                
+            } catch (error) {
+                console.error('Hiba az eszközök keresése során:', error);
+                
+                // Felhasználó megszakította a keresést
+                if (error.name === 'NotFoundError') {
+                    connectionStatus.className = 'status disconnected';
+                    connectionStatus.innerHTML = '<i class="fas fa-times-circle"></i> Nincs Bluetooth eszköz kiválasztva';
+                } else if (error.name === 'SecurityError') {
+                    connectionStatus.className = 'status disconnected';
+                    connectionStatus.innerHTML = '<i class="fas fa-shield-alt"></i> Biztonsági hiba: Nincs engedély a Bluetooth használatához';
+                } else {
+                    connectionStatus.className = 'status disconnected';
+                    connectionStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hiba: ${error.message}`;
+                }
+                
+                updateConnectionStatus(false);
+            }
+        }
+        
+        // Párosított eszköz használata (demo)
+        async function usePairedDevice() {
+            alert('Megjegyzés: A Web Bluetooth API nem kérdezheti le a már párosított eszközöket.\n\nA "Bluetooth eszközök keresése" gombbal kiválaszthatod a párosítani kívánt eszközt, majd a böngészőben végrehajthatod a párosítást.');
+            
+            // Demo: Hozzunk létre egy szimulált párosított eszközt
+            const simulatedDevice = {
+                name: 'Párosított GPS (Demo)',
+                id: 'demo-paired-device-12345'
+            };
+            
+            discoveredDevices.push(simulatedDevice);
+            updateDeviceList(discoveredDevices);
+            
+            // Kapcsolódás a szimulált eszközhöz
+            await connectToDevice(simulatedDevice);
+        }
+        
         // Kapcsolat bontása
         function disconnectFromDevice() {
-            if (bluetoothDevice && gattServer) {
+            if (bluetoothDevice && bluetoothDevice.gatt) {
                 if (bluetoothDevice.gatt.connected) {
                     bluetoothDevice.gatt.disconnect();
                 }
@@ -569,7 +688,6 @@
             
             bluetoothDevice = null;
             gattServer = null;
-            gpsCharacteristic = null;
             
             updateConnectionStatus(false);
         }
@@ -594,10 +712,12 @@
                 const alt = 100 + Math.random() * 50; // 100-150 m között
                 const spd = Math.random() * 5; // 0-5 m/s között
                 const acc = 5 + Math.random() * 10; // 5-15 m között
-                const sat = 5 + Math.floor(Math.random() * 7); // 5-11 között
                 
-                updateGPSData(lat, lon, alt, spd, acc, sat);
+                updateGPSData(lat, lon, alt, spd, acc);
             }, 2000);
+            
+            // Azonnali frissítés
+            updateGPSData(lat, lon, 120, 2.5, 8.5);
         }
         
         // Szimulált GPS adatok indítása (teszteléshez)
@@ -606,9 +726,12 @@
                 clearInterval(simulationInterval);
             }
             
-            updateConnectionStatus(true, { name: 'Szimulált GPS' });
-            deviceName.textContent = 'Szimulált GPS (demo)';
+            const simulatedDevice = {
+                name: 'Szimulált GPS',
+                id: 'demo-simulated-gps'
+            };
             
+            updateConnectionStatus(true, simulatedDevice);
             startGPSSimulation();
         }
         
@@ -624,13 +747,24 @@
             checkBluetoothSupport();
             
             // Eseménykezelők
-            connectBtn.addEventListener('click', connectToGPSDevice);
+            scanBtn.addEventListener('click', scanForDevices);
+            pairedBtn.addEventListener('click', usePairedDevice);
             disconnectBtn.addEventListener('click', disconnectFromDevice);
             simulateBtn.addEventListener('click', startSimulationOnly);
             
             // Alapértelmezett állapot
             updateConnectionStatus(false);
             resetGPSData();
+            updateDeviceList([]);
+            
+            // Demo eszközök a listához
+            discoveredDevices = [
+                { name: 'GPS Tracker 01', id: 'demo-gps-01' },
+                { name: 'Bluetooth GPS Receiver', id: 'demo-gps-02' },
+                { name: 'Smartphone GPS (Demo)', id: 'demo-phone-gps' }
+            ];
+            
+            updateDeviceList(discoveredDevices);
         }
         
         // Alkalmazás indítása
