@@ -98,6 +98,10 @@
             background: linear-gradient(to right, #ff6b6b, #ee5a52);
         }
         
+        .btn-success {
+            background: linear-gradient(to right, #28a745, #218838);
+        }
+        
         .data-display {
             margin-top: 20px;
         }
@@ -128,6 +132,10 @@
             border-radius: 10px;
             margin-top: 20px;
             font-weight: bold;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .status {
@@ -155,9 +163,10 @@
             animation: pulse 1.5s infinite;
         }
         
-        .status.error {
-            background-color: rgba(255, 152, 0, 0.2);
-            color: #ffcc80;
+        .status.reading {
+            background-color: rgba(156, 39, 176, 0.2);
+            color: #ce93d8;
+            animation: pulse 1.5s infinite;
         }
         
         @keyframes pulse {
@@ -180,30 +189,7 @@
             color: #4ecdc4;
         }
         
-        .instructions ol {
-            padding-left: 20px;
-            margin-bottom: 15px;
-        }
-        
-        .instructions li {
-            margin-bottom: 8px;
-        }
-        
-        .note {
-            font-style: italic;
-            color: #ffd166;
-            border-left: 3px solid #ffd166;
-            padding-left: 10px;
-            margin-top: 10px;
-        }
-        
-        .warning {
-            color: #ff6b6b;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-        
-        .log {
+        .raw-data {
             margin-top: 20px;
             padding: 15px;
             background-color: rgba(0, 0, 0, 0.2);
@@ -213,12 +199,21 @@
             max-height: 200px;
             overflow-y: auto;
             word-wrap: break-word;
+            white-space: pre-wrap;
         }
         
-        .log-title {
+        .raw-data-title {
             color: #4ecdc4;
             font-weight: bold;
             margin-bottom: 10px;
+        }
+        
+        .serial-service-info {
+            background-color: rgba(255, 215, 102, 0.1);
+            border-left: 4px solid #ffd166;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
         }
         
         footer {
@@ -229,14 +224,6 @@
             color: rgba(255, 255, 255, 0.7);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        .error-details {
-            background-color: rgba(255, 87, 34, 0.1);
-            border-left: 4px solid #ff5722;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 0 8px 8px 0;
-        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -244,7 +231,7 @@
     <div class="container">
         <header>
             <h1><i class="fas fa-bluetooth"></i> Bluetooth GPS Olvasó</h1>
-            <p class="subtitle">Csatlakozz Bluetooth GPS eszközhöz és olvasd ki a valós GPS adatokat</p>
+            <p class="subtitle">Valós GPS adatok olvasása Bluetooth-on keresztül</p>
         </header>
         
         <div class="status disconnected" id="connectionStatus">
@@ -253,6 +240,11 @@
         
         <div class="card">
             <h2 class="card-title"><i class="fas fa-satellite"></i> Bluetooth Kapcsolat</h2>
+            
+            <div class="serial-service-info">
+                <h4><i class="fas fa-info-circle"></i> Serial Port Service használata</h4>
+                <p>A PX1122R GPS modul a <strong>00001101-0000-1000-8000-00805f9b34fb</strong> UUID-val rendelkező Serial Port Service-t használja. Ez a standard Bluetooth soros port szolgáltatás.</p>
+            </div>
             
             <div class="data-display">
                 <div class="data-item">
@@ -267,18 +259,25 @@
                     <span class="data-label">Utolsó frissítés:</span>
                     <span class="data-value" id="lastUpdate">-</span>
                 </div>
+                <div class="data-item">
+                    <span class="data-label">Adatforrás:</span>
+                    <span class="data-value" id="dataSource">-</span>
+                </div>
             </div>
             
-            <button class="btn" id="scanBtn">
-                <i class="fas fa-search"></i> Bluetooth GPS eszköz keresése
+            <button class="btn" id="connectBtn">
+                <i class="fas fa-search"></i> GPS eszköz keresése és csatlakozás
             </button>
             <button class="btn btn-danger" id="disconnectBtn" disabled>
                 <i class="fas fa-ban"></i> Kapcsolat bontása
             </button>
+            <button class="btn btn-success" id="testReadBtn" disabled>
+                <i class="fas fa-sync"></i> Adatok olvasása (teszt)
+            </button>
             
-            <div class="log" id="logContainer" style="display: none;">
-                <div class="log-title"><i class="fas fa-terminal"></i> Kapcsolódási napló</div>
-                <div id="logContent"></div>
+            <div class="raw-data" id="rawDataContainer" style="display: none;">
+                <div class="raw-data-title"><i class="fas fa-code"></i> Nyers adatok</div>
+                <div id="rawData">Várakozás adatokra...</div>
             </div>
         </div>
         
@@ -310,168 +309,255 @@
                     <span class="data-value" id="satellites">-</span>
                 </div>
                 <div class="data-item">
-                    <span class="data-label">Adatminőség:</span>
-                    <span class="data-value" id="fixQuality">-</span>
+                    <span class="data-label">Idő:</span>
+                    <span class="data-value" id="timestamp">-</span>
                 </div>
             </div>
         </div>
         
         <div class="instructions">
-            <h3><i class="fas fa-info-circle"></i> Bluetooth GPS csatlakozási útmutató</h3>
+            <h3><i class="fas fa-info-circle"></i> Használati útmutató</h3>
             <ol>
-                <li><strong>GPS eszköz bekapcsolása:</strong> Kapcsold be a Bluetooth GPS eszközöd és győződj meg róla, hogy látható módban van (pairing mode).</li>
-                <li><strong>Bluetooth engedélyezése:</strong> Győződj meg róla, hogy a számítógépeden/telefonodon be van kapcsolva a Bluetooth.</li>
-                <li><strong>Eszköz keresése:</strong> Kattints a "Bluetooth GPS eszköz keresése" gombra.</li>
-                <li><strong>Eszköz kiválasztása:</strong> A böngésző megjelenít egy listát az elérhető Bluetooth eszközökről. Válaszd ki a GPS eszközödet.</li>
-                <li><strong>Kapcsolódás:</strong> A böngésző megkérdezi, hogy engedélyezed-e a kapcsolódást. Kattints a "Pair" vagy "Connect" gombra.</li>
-                <li><strong>Adatok olvasása:</strong> Ha sikeres a kapcsolódás, a GPS adatok megjelennek a képernyőn.</li>
+                <li><strong>Kattints a "GPS eszköz keresése és csatlakozás" gombra</strong></li>
+                <li><strong>Válaszd ki a PX1122R GPS modult</strong> a böngésző ablakában</li>
+                <li><strong>Engedélyezd a kapcsolódást</strong> (ha kéri a böngésző)</li>
+                <li><strong>Várakozás az adatokra</strong> - a GPS modul automatikusan küldi az NMEA adatokat</li>
+                <li><strong>Ha nem jönnek adatok</strong>, kattints az "Adatok olvasása (teszt)" gombra</li>
             </ol>
             
-            <div class="warning">
-                <i class="fas fa-exclamation-triangle"></i> Fontos: A Web Bluetooth API csak bizonyos böngészőkben működik megfelelően (Chrome, Edge, Opera). Győződj meg róla, hogy HTTPS kapcsolaton vagy localhost-on futtatod az alkalmazást.
-            </div>
-            
-            <div class="error-details" id="errorDetails" style="display: none;">
-                <h4><i class="fas fa-bug"></i> Kapcsolódási hiba részletei</h4>
-                <div id="errorContent"></div>
-            </div>
+            <p>A PX1122R modul NMEA 0183 formátumban küldi az adatokat (GGA, RMC, GSA üzenetek).</p>
         </div>
         
         <footer>
-            <p>Bluetooth GPS Olvasó &copy; 2023 | Web Bluetooth API - Valós kapcsolódás</p>
-            <p>Ez az alkalmazás valós Bluetooth GPS eszközökhöz csatlakozik és olvassa ki az adatokat.</p>
+            <p>Bluetooth GPS Olvasó &copy; 2023 | Valós GPS adatok Bluetooth-on keresztül</p>
+            <p>Serial Port Service UUID: 00001101-0000-1000-8000-00805f9b34fb</p>
         </footer>
     </div>
 
     <script>
         // DOM elemek
-        const scanBtn = document.getElementById('scanBtn');
+        const connectBtn = document.getElementById('connectBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
+        const testReadBtn = document.getElementById('testReadBtn');
         const connectionStatus = document.getElementById('connectionStatus');
         const deviceName = document.getElementById('deviceName');
         const deviceStatus = document.getElementById('deviceStatus');
         const lastUpdate = document.getElementById('lastUpdate');
+        const dataSource = document.getElementById('dataSource');
         const coordinates = document.getElementById('coordinates');
         const latitude = document.getElementById('latitude');
         const longitude = document.getElementById('longitude');
         const altitude = document.getElementById('altitude');
         const speed = document.getElementById('speed');
         const satellites = document.getElementById('satellites');
-        const fixQuality = document.getElementById('fixQuality');
-        const logContainer = document.getElementById('logContainer');
-        const logContent = document.getElementById('logContent');
-        const errorDetails = document.getElementById('errorDetails');
-        const errorContent = document.getElementById('errorContent');
+        const timestamp = document.getElementById('timestamp');
+        const rawDataContainer = document.getElementById('rawDataContainer');
+        const rawData = document.getElementById('rawData');
         
-        // Web Bluetooth változók
-        let bluetoothDevice = null;
-        let gattServer = null;
-        let gpsCharacteristic = null;
+        // Bluetooth változók
+        let device = null;
+        let server = null;
+        let service = null;
+        let characteristic = null;
         let isConnected = false;
         
-        // Napló bejegyzés hozzáadása
-        function addLog(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString('hu-HU');
-            const typeIcon = type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
-            const logEntry = document.createElement('div');
-            logEntry.innerHTML = `${typeIcon} [${timestamp}] ${message}`;
-            logEntry.style.marginBottom = '5px';
-            logEntry.style.color = type === 'error' ? '#ff6b6b' : type === 'warning' ? '#ffd166' : '#a5d8ff';
-            
-            logContent.appendChild(logEntry);
-            logContainer.scrollTop = logContainer.scrollHeight;
-            logContainer.style.display = 'block';
-        }
+        // Serial Port Service UUID (standard Bluetooth soros port)
+        const SERIAL_PORT_SERVICE_UUID = '00001101-0000-1000-8000-00805f9b34fb';
         
-        // Hiba részletek megjelenítése
-        function showErrorDetails(error) {
-            let errorHtml = `
-                <p><strong>Hiba típusa:</strong> ${error.name || 'Ismeretlen'}</p>
-                <p><strong>Hibaüzenet:</strong> ${error.message || 'Nincs hibaüzenet'}</p>
-            `;
-            
-            if (error.stack) {
-                errorHtml += `<p><strong>Hiba részletek:</strong></p><pre style="font-size: 0.8rem; overflow-x: auto;">${error.stack}</pre>`;
+        // Web Bluetooth támogatás ellenőrzése
+        function checkBluetoothSupport() {
+            if (!navigator.bluetooth) {
+                alert('A böngésző nem támogatja a Web Bluetooth API-t. Használj Chrome, Edge vagy Opera böngészőt.');
+                return false;
             }
-            
-            errorContent.innerHTML = errorHtml;
-            errorDetails.style.display = 'block';
+            return true;
         }
         
         // GPS adatok frissítése a felületen
-        function updateGPSData(lat, lon, alt, spd, sat, fix) {
-            // Frissítés a felületen
-            if (lat !== null && lon !== null) {
+        function updateGPSFromNMEA(nmeaSentence) {
+            // NMEA üzenet megjelenítése
+            rawData.textContent = nmeaSentence;
+            rawDataContainer.style.display = 'block';
+            
+            // NMEA üzenet feldolgozása
+            if (nmeaSentence.includes('$GPGGA') || nmeaSentence.includes('$GNGGA')) {
+                parseGGA(nmeaSentence);
+            } else if (nmeaSentence.includes('$GPRMC') || nmeaSentence.includes('$GNRMC')) {
+                parseRMC(nmeaSentence);
+            }
+            
+            // Utolsó frissítés ideje
+            const now = new Date();
+            lastUpdate.textContent = now.toLocaleTimeString('hu-HU');
+            timestamp.textContent = now.toLocaleTimeString('hu-HU');
+        }
+        
+        // GGA üzenet feldolgozása
+        function parseGGA(nmea) {
+            const parts = nmea.split(',');
+            if (parts.length < 15) return;
+            
+            // Idő
+            const time = parts[1];
+            if (time && time.length >= 6) {
+                const hours = time.substring(0, 2);
+                const minutes = time.substring(2, 4);
+                const seconds = time.substring(4, 6);
+                // timestamp.textContent = `${hours}:${minutes}:${seconds} UTC`;
+            }
+            
+            // Szélesség
+            const lat = parts[2];
+            const latDir = parts[3];
+            if (lat && latDir && lat.length >= 4) {
+                const latDeg = parseFloat(lat.substring(0, 2));
+                const latMin = parseFloat(lat.substring(2));
+                const latValue = latDeg + (latMin / 60);
+                const finalLat = latDir === 'S' ? -latValue : latValue;
+                
+                latitude.textContent = `${finalLat.toFixed(6)}°`;
+            }
+            
+            // Hosszúság
+            const lon = parts[4];
+            const lonDir = parts[5];
+            if (lon && lonDir && lon.length >= 5) {
+                const lonDeg = parseFloat(lon.substring(0, 3));
+                const lonMin = parseFloat(lon.substring(3));
+                const lonValue = lonDeg + (lonMin / 60);
+                const finalLon = lonDir === 'W' ? -lonValue : lonValue;
+                
+                longitude.textContent = `${finalLon.toFixed(6)}°`;
+            }
+            
+            // Fix minőség
+            const fix = parts[6];
+            
+            // Műholdak száma
+            const satCount = parts[7];
+            if (satCount) {
+                satellites.textContent = satCount;
+            }
+            
+            // HDOP
+            const hdop = parts[8];
+            
+            // Magasság
+            const alt = parts[9];
+            const altUnit = parts[10];
+            if (alt) {
+                altitude.textContent = `${parseFloat(alt).toFixed(1)} ${altUnit || 'm'}`;
+            }
+            
+            // Koordináták frissítése
+            updateCoordinatesDisplay();
+        }
+        
+        // RMC üzenet feldolgozása
+        function parseRMC(nmea) {
+            const parts = nmea.split(',');
+            if (parts.length < 12) return;
+            
+            // Állapot
+            const status = parts[2];
+            if (status === 'V') {
+                deviceStatus.textContent = 'Nincs érvényes adat';
+                deviceStatus.style.color = '#ff6b6b';
+            } else if (status === 'A') {
+                deviceStatus.textContent = 'Érvényes adat';
+                deviceStatus.style.color = '#81c784';
+            }
+            
+            // Szélesség
+            const lat = parts[3];
+            const latDir = parts[4];
+            if (lat && latDir && lat.length >= 4) {
+                const latDeg = parseFloat(lat.substring(0, 2));
+                const latMin = parseFloat(lat.substring(2));
+                const latValue = latDeg + (latMin / 60);
+                const finalLat = latDir === 'S' ? -latValue : latValue;
+                
+                latitude.textContent = `${finalLat.toFixed(6)}°`;
+            }
+            
+            // Hosszúság
+            const lon = parts[5];
+            const lonDir = parts[6];
+            if (lon && lonDir && lon.length >= 5) {
+                const lonDeg = parseFloat(lon.substring(0, 3));
+                const lonMin = parseFloat(lon.substring(3));
+                const lonValue = lonDeg + (lonMin / 60);
+                const finalLon = lonDir === 'W' ? -lonValue : lonValue;
+                
+                longitude.textContent = `${finalLon.toFixed(6)}°`;
+            }
+            
+            // Sebesség (csomókban)
+            const speedKnots = parts[7];
+            if (speedKnots) {
+                const speedKmh = parseFloat(speedKnots) * 1.852;
+                speed.textContent = `${speedKmh.toFixed(1)} km/h`;
+            }
+            
+            // Irány
+            const course = parts[8];
+            
+            // Dátum
+            const date = parts[9];
+            
+            // Koordináták frissítése
+            updateCoordinatesDisplay();
+        }
+        
+        // Koordináták megjelenítésének frissítése
+        function updateCoordinatesDisplay() {
+            const latText = latitude.textContent;
+            const lonText = longitude.textContent;
+            
+            if (latText !== '-' && lonText !== '-') {
+                const lat = parseFloat(latText);
+                const lon = parseFloat(lonText);
+                
                 const latDirection = lat >= 0 ? 'É' : 'D';
                 const lonDirection = lon >= 0 ? 'K' : 'Ny';
                 const latAbs = Math.abs(lat).toFixed(4);
                 const lonAbs = Math.abs(lon).toFixed(4);
                 
                 coordinates.textContent = `${latAbs}° ${latDirection}, ${lonAbs}° ${lonDirection}`;
-                latitude.textContent = `${lat.toFixed(6)}°`;
-                longitude.textContent = `${lon.toFixed(6)}°`;
+                coordinates.style.color = '#81c784';
             }
-            
-            if (alt !== null) {
-                altitude.textContent = `${alt.toFixed(1)} m`;
-            }
-            
-            if (spd !== null) {
-                speed.textContent = `${(spd * 3.6).toFixed(1)} km/h`;
-            }
-            
-            if (sat !== null) {
-                satellites.textContent = sat;
-            }
-            
-            if (fix !== null) {
-                const fixQualities = {
-                    '0': 'Érvénytelen',
-                    '1': 'GPS fix',
-                    '2': 'DGPS fix',
-                    '3': 'PPS fix',
-                    '4': 'RTK fix',
-                    '5': 'RTK float',
-                    '6': 'Becsült',
-                    '7': 'Kézi bevitel',
-                    '8': 'Szimuláció'
-                };
-                fixQuality.textContent = fixQualities[fix] || `Ismeretlen (${fix})`;
-            }
-            
-            // Utolsó frissítés ideje
-            const now = new Date();
-            lastUpdate.textContent = now.toLocaleTimeString('hu-HU');
         }
         
         // Kapcsolat állapotának frissítése
-        function updateConnectionStatus(connected, device = null) {
+        function updateConnectionStatus(connected, dev = null) {
             isConnected = connected;
             
             if (connected) {
                 connectionStatus.className = 'status connected';
-                connectionStatus.innerHTML = `<i class="fas fa-link"></i> Csatlakozva: ${device ? device.name : 'Bluetooth eszköz'}`;
-                scanBtn.disabled = true;
+                connectionStatus.innerHTML = `<i class="fas fa-link"></i> Csatlakozva`;
+                connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
+                testReadBtn.disabled = false;
                 deviceStatus.textContent = 'Csatlakozva';
-                deviceStatus.style.color = '#81c784';
+                dataSource.textContent = 'Serial Port Service';
                 
-                if (device) {
-                    deviceName.textContent = device.name || 'Ismeretlen eszköz';
+                if (dev) {
+                    deviceName.textContent = dev.name || 'Ismeretlen eszköz';
                 }
                 
-                addLog(`Sikeresen csatlakozva: ${device ? device.name : 'Ismeretlen eszköz'}`, 'info');
+                rawDataContainer.style.display = 'block';
                 
             } else {
                 connectionStatus.className = 'status disconnected';
-                connectionStatus.innerHTML = '<i class="fas fa-unlink"></i> Nincs csatlakoztatva Bluetooth eszköz';
-                scanBtn.disabled = false;
+                connectionStatus.innerHTML = '<i class="fas fa-unlink"></i> Nincs csatlakoztatva';
+                connectBtn.disabled = false;
                 disconnectBtn.disabled = true;
+                testReadBtn.disabled = true;
                 deviceStatus.textContent = 'Nem csatlakoztatva';
-                deviceStatus.style.color = '#ef9a9a';
                 deviceName.textContent = '-';
+                dataSource.textContent = '-';
                 
-                // GPS adatok visszaállítása
+                // Adatok visszaállítása
                 resetGPSData();
             }
         }
@@ -479,165 +565,90 @@
         // GPS adatok visszaállítása
         function resetGPSData() {
             coordinates.textContent = 'Nem érhető el GPS adat';
+            coordinates.style.color = '#ffd166';
             latitude.textContent = '-';
             longitude.textContent = '-';
             altitude.textContent = '-';
             speed.textContent = '-';
             satellites.textContent = '-';
-            fixQuality.textContent = '-';
+            timestamp.textContent = '-';
             lastUpdate.textContent = '-';
+            rawData.textContent = 'Nincs kapcsolat';
         }
         
-        // Web Bluetooth API támogatás ellenőrzése
-        function checkBluetoothSupport() {
-            if (!navigator.bluetooth) {
-                const errorMsg = 'A böngészője nem támogatja a Web Bluetooth API-t. Kérjük, használjon Chrome, Edge vagy Opera böngészőt.';
-                addLog(errorMsg, 'error');
-                alert(errorMsg);
-                return false;
-            }
+        // Bluetooth eszköz keresése és csatlakozás
+        async function connectToDevice() {
+            if (!checkBluetoothSupport()) return;
             
-            // Ellenőrizzük, hogy a Bluetooth elérhető-e
-            return navigator.bluetooth.getAvailability().then(available => {
-                if (!available) {
-                    const errorMsg = 'Bluetooth nem elérhető ezen az eszközön. Ellenőrizze, hogy be van-e kapcsolva a Bluetooth.';
-                    addLog(errorMsg, 'error');
-                    alert(errorMsg);
-                    return false;
-                }
-                return true;
-            }).catch(error => {
-                addLog(`Bluetooth elérhetőség ellenőrzése sikertelen: ${error.message}`, 'error');
-                return false;
-            });
-        }
-        
-        // Bluetooth eszközök keresése és csatlakozás
-        async function scanAndConnect() {
             try {
-                // Bluetooth támogatás ellenőrzése
-                const isAvailable = await checkBluetoothSupport();
-                if (!isAvailable) {
-                    updateConnectionStatus(false);
-                    return;
-                }
-                
                 connectionStatus.className = 'status scanning';
-                connectionStatus.innerHTML = '<i class="fas fa-search"></i> Bluetooth eszközök keresése...';
-                addLog('Bluetooth eszközök keresése megkezdve...', 'info');
+                connectionStatus.innerHTML = '<i class="fas fa-search"></i> GPS eszköz keresése...';
                 
-                // Bluetooth eszköz kiválasztása - minimális opciókkal
-                const options = {
-                    acceptAllDevices: true, // Minden eszköz megjelenjen
-                    optionalServices: [] // Ne szűrjünk szolgáltatások alapján
-                };
+                // Eszköz kiválasztása
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [SERIAL_PORT_SERVICE_UUID] }],
+                    optionalServices: [SERIAL_PORT_SERVICE_UUID]
+                });
                 
-                addLog('A böngésző Bluetooth párbeszédpanelének megnyitása...', 'info');
-                
-                // Bluetooth eszköz kiválasztása
-                bluetoothDevice = await navigator.bluetooth.requestDevice(options);
-                
-                if (!bluetoothDevice) {
-                    addLog('Felhasználó megszakította az eszköz kiválasztását', 'warning');
-                    updateConnectionStatus(false);
-                    return;
+                if (!device) {
+                    throw new Error('Nincs eszköz kiválasztva');
                 }
-                
-                addLog(`Eszköz kiválasztva: ${bluetoothDevice.name || 'Név nélküli eszköz'} (ID: ${bluetoothDevice.id || 'N/A'})`, 'info');
                 
                 // Eseménykezelő a kapcsolat megszakadásához
-                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                device.addEventListener('gattserverdisconnected', onDisconnected);
                 
-                // Kapcsolódás az eszközhöz
-                connectionStatus.innerHTML = '<i class="fas fa-sync fa-spin"></i> Kapcsolódás az eszközhöz...';
-                addLog('Kapcsolódás az eszközhöz...', 'info');
+                // Kapcsolódás
+                connectionStatus.className = 'status reading';
+                connectionStatus.innerHTML = '<i class="fas fa-sync fa-spin"></i> Kapcsolódás...';
                 
-                try {
-                    gattServer = await bluetoothDevice.gatt.connect();
-                    addLog('Sikeresen kapcsolódva a GATT szerverhez', 'info');
-                } catch (connectError) {
-                    addLog(`Hiba a GATT szerverhez való kapcsolódásnál: ${connectError.message}`, 'error');
-                    showErrorDetails(connectError);
-                    throw connectError;
-                }
+                server = await device.gatt.connect();
                 
-                // Szolgáltatások listázása
-                connectionStatus.innerHTML = '<i class="fas fa-list"></i> Szolgáltatások keresése...';
-                addLog('Szolgáltatások listázása...', 'info');
+                // Serial Port Service lekérése
+                service = await server.getPrimaryService(SERIAL_PORT_SERVICE_UUID);
                 
-                let services;
-                try {
-                    services = await gattServer.getPrimaryServices();
-                    addLog(`${services.length} szolgáltatás található`, 'info');
-                } catch (serviceError) {
-                    addLog(`Hiba a szolgáltatások lekérésekor: ${serviceError.message}`, 'error');
-                    showErrorDetails(serviceError);
-                    throw serviceError;
-                }
+                // Karakterisztikák lekérése
+                const characteristics = await service.getCharacteristics();
                 
-                // Szolgáltatások naplózása
-                for (let i = 0; i < services.length; i++) {
-                    const service = services[i];
-                    addLog(`Szolgáltatás ${i + 1}: ${service.uuid}`, 'info');
+                // Megkeressük az olvasható/írható karakterisztikát
+                for (const char of characteristics) {
+                    console.log('Karakterisztika:', char.uuid, 'Tulajdonságok:', char.properties);
                     
-                    // Próbáljuk megkapni a karakterisztikákat
-                    try {
-                        const characteristics = await service.getCharacteristics();
-                        addLog(`  - ${characteristics.length} karakterisztika`, 'info');
-                        
-                        for (let j = 0; j < characteristics.length; j++) {
-                            const char = characteristics[j];
-                            addLog(`    Karakterisztika ${j + 1}: ${char.uuid} (Tulajdonságok: ${char.properties})`, 'info');
-                            
-                            // Ha találunk egy olvasható karakterisztikát, próbáljuk megolvasni
-                            if (char.properties.read) {
-                                try {
-                                    const value = await char.readValue();
-                                    const decoder = new TextDecoder();
-                                    const text = decoder.decode(value);
-                                    addLog(`    Érték: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`, 'info');
-                                    
-                                    // Ha ez GPS adatnak tűnik (NMEA formátum)
-                                    if (text.includes('$GP') || text.includes('$GN')) {
-                                        gpsCharacteristic = char;
-                                        addLog('GPS karakterisztika találva!', 'info');
-                                        
-                                        // Próbáljunk feliratkozni az értesítésekre
-                                        if (char.properties.notify) {
-                                            await char.startNotifications();
-                                            char.addEventListener('characteristicvaluechanged', handleGPSData);
-                                            addLog('Feliratkozva a GPS adatokra', 'info');
-                                        }
-                                    }
-                                } catch (readError) {
-                                    addLog(`    Hiba az olvasásnál: ${readError.message}`, 'warning');
-                                }
-                            }
-                        }
-                    } catch (charError) {
-                        addLog(`  - Hiba a karakterisztikák lekérésekor: ${charError.message}`, 'warning');
+                    // Ha van notify tulajdonság, használjuk azt
+                    if (char.properties.notify) {
+                        characteristic = char;
+                        break;
+                    }
+                    // Ha nincs notify, de van read, akkor azt
+                    else if (char.properties.read) {
+                        characteristic = char;
                     }
                 }
                 
-                // Ha nem találtunk GPS karakterisztikát, de sikeresen csatlakoztunk
-                updateConnectionStatus(true, bluetoothDevice);
-                addLog('Kapcsolódás sikeres. Várakozás GPS adatokra...', 'info');
+                if (!characteristic) {
+                    throw new Error('Nem található olvasható karakterisztika');
+                }
+                
+                // Ha van notify, feliratkozunk
+                if (characteristic.properties.notify) {
+                    await characteristic.startNotifications();
+                    characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+                }
+                
+                updateConnectionStatus(true, device);
+                
+                // Ha nincs notify, de van read, akkor indítunk egy periodikus olvasást
+                if (characteristic.properties.read && !characteristic.properties.notify) {
+                    startPeriodicReading();
+                }
                 
             } catch (error) {
                 console.error('Hiba a kapcsolódás során:', error);
                 
                 if (error.name === 'NotFoundError') {
-                    addLog('Felhasználó megszakította az eszköz kiválasztását', 'warning');
                     connectionStatus.className = 'status disconnected';
-                    connectionStatus.innerHTML = '<i class="fas fa-times-circle"></i> Nincs Bluetooth eszköz kiválasztva';
-                } else if (error.name === 'SecurityError') {
-                    addLog('Biztonsági hiba: Nincs engedély a Bluetooth használatához', 'error');
-                    connectionStatus.className = 'status error';
-                    connectionStatus.innerHTML = '<i class="fas fa-shield-alt"></i> Biztonsági hiba: Nincs engedély';
+                    connectionStatus.innerHTML = '<i class="fas fa-times-circle"></i> Nincs eszköz kiválasztva';
                 } else {
-                    addLog(`Hiba: ${error.message}`, 'error');
-                    showErrorDetails(error);
-                    connectionStatus.className = 'status error';
+                    connectionStatus.className = 'status disconnected';
                     connectionStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hiba: ${error.message}`;
                 }
                 
@@ -645,121 +656,106 @@
             }
         }
         
-        // GPS adatok kezelése
-        function handleGPSData(event) {
+        // Karakterisztika érték változás kezelése
+        function handleCharacteristicValueChanged(event) {
             try {
                 const value = event.target.value;
                 const decoder = new TextDecoder();
-                const textData = decoder.decode(value);
+                const text = decoder.decode(value);
                 
-                addLog(`GPS adat érkezett: ${textData.substring(0, 50)}${textData.length > 50 ? '...' : ''}`, 'info');
+                // NMEA üzenetek kezelése (több sor is lehet egy csomagban)
+                const lines = text.split('\n').filter(line => line.trim().length > 0);
                 
-                // Egyszerű NMEA feldolgozás (demo célokra)
-                // Valós alkalmazásban itt kellene teljes NMEA parser-t implementálni
-                if (textData.includes('$GPGGA') || textData.includes('$GNGGA')) {
-                    const parts = textData.split(',');
-                    
-                    if (parts.length >= 10) {
-                        // Szélesség
-                        if (parts[2] && parts[3]) {
-                            const latDeg = parseFloat(parts[2].substring(0, 2));
-                            const latMin = parseFloat(parts[2].substring(2));
-                            const latValue = latDeg + (latMin / 60);
-                            const lat = parts[3] === 'S' ? -latValue : latValue;
-                            
-                            // Hosszúság
-                            const lonDeg = parseFloat(parts[4].substring(0, 3));
-                            const lonMin = parseFloat(parts[4].substring(3));
-                            const lonValue = lonDeg + (lonMin / 60);
-                            const lon = parts[5] === 'W' ? -lonValue : lonValue;
-                            
-                            // Magasság
-                            const alt = parts[9] ? parseFloat(parts[9]) : null;
-                            
-                            // Műholdak száma
-                            const sat = parts[7] ? parseInt(parts[7]) : null;
-                            
-                            // Fix minőség
-                            const fix = parts[6] || null;
-                            
-                            updateGPSData(lat, lon, alt, 0, sat, fix);
-                        }
+                for (const line of lines) {
+                    if (line.startsWith('$')) {
+                        updateGPSFromNMEA(line.trim());
                     }
                 }
                 
             } catch (error) {
-                addLog(`Hiba a GPS adatok feldolgozásakor: ${error.message}`, 'error');
+                console.error('Hiba az adatok feldolgozásakor:', error);
+            }
+        }
+        
+        // Periodikus olvasás indítása (ha nincs notify)
+        function startPeriodicReading() {
+            const interval = setInterval(async () => {
+                if (!isConnected || !characteristic || !characteristic.properties.read) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                try {
+                    const value = await characteristic.readValue();
+                    handleCharacteristicValueChanged({ target: { value } });
+                } catch (error) {
+                    console.error('Hiba az olvasás során:', error);
+                }
+            }, 1000); // 1 másodpercenként
+        }
+        
+        // Teszt olvasás
+        async function testRead() {
+            if (!characteristic || !characteristic.properties.read) {
+                alert('A karakterisztika nem támogatja az olvasást');
+                return;
+            }
+            
+            try {
+                const value = await characteristic.readValue();
+                const decoder = new TextDecoder();
+                const text = decoder.decode(value);
+                
+                if (text.trim().length > 0) {
+                    updateGPSFromNMEA(text);
+                    alert(`Sikeres olvasás: ${text.substring(0, 50)}...`);
+                } else {
+                    alert('Nincs adat a karakterisztikában');
+                }
+                
+            } catch (error) {
+                alert(`Hiba az olvasás során: ${error.message}`);
             }
         }
         
         // Kapcsolat bontása
         function disconnectFromDevice() {
-            addLog('Kapcsolat bontása...', 'info');
-            
-            if (bluetoothDevice && bluetoothDevice.gatt) {
-                if (bluetoothDevice.gatt.connected) {
-                    bluetoothDevice.gatt.disconnect();
-                    addLog('Kapcsolat megszakítva', 'info');
-                }
-            }
-            
-            if (gpsCharacteristic) {
+            if (characteristic && characteristic.properties.notify) {
                 try {
-                    if (gpsCharacteristic.properties.notify) {
-                        gpsCharacteristic.stopNotifications();
-                        gpsCharacteristic.removeEventListener('characteristicvaluechanged', handleGPSData);
-                        addLog('GPS értesítések leállítva', 'info');
-                    }
-                } catch (e) {
-                    addLog(`Hiba az értesítések leállításakor: ${e.message}`, 'warning');
+                    characteristic.stopNotifications();
+                } catch (error) {
+                    console.error('Hiba az értesítések leállításakor:', error);
                 }
-                gpsCharacteristic = null;
             }
             
-            bluetoothDevice = null;
-            gattServer = null;
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+            }
+            
+            device = null;
+            server = null;
+            service = null;
+            characteristic = null;
             
             updateConnectionStatus(false);
-            addLog('Kapcsolat teljesen bontva', 'info');
         }
         
         // Eseménykezelő a kapcsolat megszakadásához
         function onDisconnected() {
-            addLog('Eszköz kapcsolata megszakadt (gattserverdisconnected)', 'warning');
+            console.log('Eszköz kapcsolata megszakadt');
             disconnectFromDevice();
         }
         
         // Inicializálás
         function init() {
             // Eseménykezelők
-            scanBtn.addEventListener('click', scanAndConnect);
+            connectBtn.addEventListener('click', connectToDevice);
             disconnectBtn.addEventListener('click', disconnectFromDevice);
+            testReadBtn.addEventListener('click', testRead);
             
             // Alapértelmezett állapot
             updateConnectionStatus(false);
             resetGPSData();
-            
-            // Napló inicializálása
-            addLog('Alkalmazás inicializálva', 'info');
-            addLog('Kattints a "Bluetooth GPS eszköz keresése" gombra a kapcsolódáshoz', 'info');
-            
-            // Böngésző információk naplózása
-            addLog(`Böngésző: ${navigator.userAgent.substring(0, 50)}...`, 'info');
-            
-            // Web Bluetooth API támogatás ellenőrzése
-            if (!navigator.bluetooth) {
-                addLog('Figyelem: A böngésző nem támogatja a Web Bluetooth API-t', 'error');
-            } else {
-                navigator.bluetooth.getAvailability().then(available => {
-                    if (available) {
-                        addLog('Bluetooth elérhető ezen az eszközön', 'info');
-                    } else {
-                        addLog('Bluetooth nem elérhető ezen az eszközön', 'warning');
-                    }
-                }).catch(error => {
-                    addLog(`Hiba a Bluetooth elérhetőség ellenőrzésekor: ${error.message}`, 'error');
-                });
-            }
         }
         
         // Alkalmazás indítása
