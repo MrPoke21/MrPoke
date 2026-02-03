@@ -296,7 +296,74 @@
         let satelliteCount = 0;
         let bluetoothReconnectInterval = null;
         
-        // NMEA Parser class
+        // ========== POSITION TRACKING FUNCTIONS (DEFINE THEM EARLY) ==========
+        
+        // Pozíció követés leállítása
+        function stopPositionTracking() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            forceGpsMode = false;
+        }
+        
+        // Pozíció hiba kezelése
+        function handlePositionError(error) {
+            console.error("Helymeghatározási hiba:", error);
+            
+            // Only show error if we're using internal GPS
+            if (gpsSource === 'internal') {
+                let errorMessage = "Hiba: ";
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage += "Hozzáférés megtagadva. Engedélyezd a helymeghatározást!";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage += "Helyinformáció nem elérhető. Ellenőrizd a GPS-t!";
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage += "Időtúllépés. Próbáld újra!";
+                        break;
+                    default:
+                        errorMessage += "Ismeretlen hiba.";
+                        break;
+                }
+                
+                // Firefox specifikus javaslat
+                if (isFirefox && error.code === error.POSITION_UNAVAILABLE) {
+                    errorMessage += "\n\nFirefox: Próbáld a 'GPS Kényszerítése' gombot, vagy ellenőrizd az about:config beállításokat.";
+                }
+                
+                document.getElementById('locationStatus').textContent = "HIBA";
+                document.getElementById('coordinates').textContent = "-";
+                document.getElementById('accuracyFill').style.width = "0%";
+                document.getElementById('accuracyText').textContent = "-";
+                
+                showPositionError(errorMessage);
+                
+                // Alapértelmezett pozíció (Budapest) beállítása hiba esetén
+                if (!userLatLng) {
+                    userLatLng = [47.4979, 19.0402];
+                    userMarker = L.marker(userLatLng, {
+                        icon: L.divIcon({
+                            className: 'user-location-icon',
+                            html: '<div style="background-color:#3498db;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>',
+                            iconSize: [26, 26],
+                            iconAnchor: [13, 13]
+                        })
+                    }).addTo(map);
+                    userMarker.bindTooltip("Alapértelmezett pozíció", {permanent: false, direction: 'top'}).openTooltip();
+                }
+                
+                const statusElement = document.querySelector('.position-status');
+                statusElement.classList.remove('high-accuracy', 'medium-accuracy', 'low-accuracy');
+                statusElement.classList.add('inactive');
+                document.getElementById('gpsTypeBadge').style.display = 'none';
+            }
+        }
+        
+        // ========== NMEA PARSER CLASS ==========
+        
         class NMEAParser {
             constructor() {
                 this.lastValidData = null;
@@ -491,7 +558,8 @@
             }
         }
         
-        // Bluetooth GPS Functions
+        // ========== BLUETOOTH GPS FUNCTIONS ==========
+        
         async function scanBluetoothDevices() {
             try {
                 if (!navigator.bluetooth) {
@@ -799,7 +867,8 @@
             }
         }
         
-        // GPS Source Switching
+        // ========== GPS SOURCE SWITCHING ==========
+        
         function switchToInternalGPS() {
             gpsSource = 'internal';
             
@@ -808,11 +877,8 @@
             document.getElementById('sourceBluetooth').classList.remove('active');
             document.getElementById('bluetoothSection').style.display = 'none';
             
-            // Stop Bluetooth if connected
-            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                // Don't disconnect, just stop using it
-                console.log('Átváltás belső GPS-re');
-            }
+            // Stop Bluetooth if connected (but don't disconnect)
+            console.log('Átváltás belső GPS-re');
             
             // Start internal GPS tracking
             stopPositionTracking();
@@ -827,6 +893,9 @@
             // Update GPS type badge
             document.getElementById('gpsTypeBadge').textContent = 'GPS';
             document.getElementById('gpsTypeBadge').className = 'gps-type gps-high';
+            
+            // Update status
+            document.getElementById('locationStatus').textContent = "Belső GPS aktív";
         }
         
         function switchToBluetoothGPS() {
@@ -851,6 +920,7 @@
             document.getElementById('gpsTypeBadge').textContent = 'BT GPS';
             document.getElementById('gpsTypeBadge').className = 'gps-type gps-high';
             
+            // Update status
             document.getElementById('locationStatus').textContent = "Bluetooth GPS aktív";
         }
         
@@ -891,13 +961,279 @@
             hidePositionError();
         }
         
-        // Modified position error handling
-        function handlePositionError(error) {
-            // Only show error if we're using internal GPS
-            if (gpsSource === 'internal') {
-                // ... (existing error handling code) ...
+        // ========== EXISTING CODE (from original file) ==========
+        
+        // Térkép inicializálása
+        const map = L.map('map').setView([47.1625, 19.5033], 7); // Magyarország közepén
+        
+        // OpenStreetMap alapértelmezett térképréteg hozzáadása
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Változók inicializálása
+        let userMarker = null;
+        let userLatLng = null;
+        let originalPolygons = [];
+        let polygonElements = []; // Összes elem: sarkok és oldalak
+        let displayedElements = []; // Jelenleg megjelenített elemek
+        let measurementLine = null; // Mérési vonal
+        let extendedLine = null; // Kiterjesztett egyenes
+        let lastClickedElement = null;
+        let currentMode = 'all'; // 'all', 'corners', 'sides'
+        let isFullscreen = false;
+        let sidebarVisible = true;
+        let watchId = null; // Geolocation watch ID
+        let forceGpsMode = false; // GPS kényszerítés mód
+        let isFirefox = false;
+        let accuracyHistory = []; // Pontosság előzmények
+        
+        // Böngésző detektálás
+        function detectBrowser() {
+            const userAgent = navigator.userAgent;
+            
+            if (userAgent.indexOf("Firefox") > -1) {
+                isFirefox = true;
+                document.getElementById('browserInfo').textContent = "Böngésző: Firefox";
+                document.getElementById('firefoxOptimization').style.display = 'block';
+                document.getElementById('locationStatus').textContent = "Firefox észlelve - GPS optimalizálás...";
+            } else if (userAgent.indexOf("Chrome") > -1) {
+                document.getElementById('browserInfo').textContent = "Böngésző: Chrome";
+                document.getElementById('locationStatus').textContent = "Chrome észlelve - Teljes GPS támogatás";
+            } else {
+                document.getElementById('browserInfo').textContent = `Böngésző: ${userAgent.split(' ')[0]}`;
             }
         }
+        
+        // Pontosság állapot frissítése
+        function updateAccuracyStatus(accuracy) {
+            const accuracyFill = document.getElementById('accuracyFill');
+            const accuracyText = document.getElementById('accuracyText');
+            const statusElement = document.querySelector('.position-status');
+            const gpsTypeBadge = document.getElementById('gpsTypeBadge');
+            
+            // Tároljuk a pontosság előzményeket
+            accuracyHistory.push(accuracy);
+            if (accuracyHistory.length > 10) {
+                accuracyHistory.shift();
+            }
+            
+            // Átlagos pontosság számítása
+            const avgAccuracy = accuracyHistory.reduce((a, b) => a + b, 0) / accuracyHistory.length;
+            
+            // Pontosság százalék (0-100%, ahol 0 a legjobb)
+            let accuracyPercent;
+            if (accuracy <= 10) {
+                accuracyPercent = 100; // 0-10m = 100%
+            } else if (accuracy <= 50) {
+                accuracyPercent = 80; // 10-50m = 80%
+            } else if (accuracy <= 100) {
+                accuracyPercent = 60; // 50-100m = 60%
+            } else if (accuracy <= 500) {
+                accuracyPercent = 40; // 100-500m = 40%
+            } else {
+                accuracyPercent = 20; // 500m+ = 20%
+            }
+            
+            accuracyFill.style.width = `${accuracyPercent}%`;
+            accuracyText.textContent = `${accuracy.toFixed(1)} m`;
+            
+            // Állapotjelző frissítése
+            statusElement.classList.remove('high-accuracy', 'medium-accuracy', 'low-accuracy', 'inactive');
+            
+            if (accuracy <= 20) {
+                // Magas pontosság (GPS)
+                statusElement.classList.add('high-accuracy');
+                accuracyText.className = 'accuracy-text high-accuracy-text';
+                gpsTypeBadge.textContent = 'GPS';
+                gpsTypeBadge.className = 'gps-type gps-high';
+                gpsTypeBadge.style.display = 'inline';
+                document.getElementById('locationStatus').textContent = "Magas pontosságú GPS";
+            } else if (accuracy <= 100) {
+                // Közepes pontosság (WiFi/hálózat)
+                statusElement.classList.add('medium-accuracy');
+                accuracyText.className = 'accuracy-text medium-accuracy-text';
+                gpsTypeBadge.textContent = 'HÁLÓZAT';
+                gpsTypeBadge.className = 'gps-type gps-medium';
+                gpsTypeBadge.style.display = 'inline';
+                document.getElementById('locationStatus').textContent = "Közepes pontosság (hálózat)";
+            } else {
+                // Alacsony pontosság (cellás/becslés)
+                statusElement.classList.add('low-accuracy');
+                accuracyText.className = 'accuracy-text low-accuracy-text';
+                gpsTypeBadge.textContent = 'BECSLÉS';
+                gpsTypeBadge.className = 'gps-type gps-low';
+                gpsTypeBadge.style.display = 'inline';
+                document.getElementById('locationStatus').textContent = "Alacsony pontosság (becslés)";
+            }
+            
+            // Firefox specifikus javaslat
+            if (isFirefox && accuracy > 50) {
+                document.getElementById('firefoxOptimization').style.display = 'block';
+            }
+        }
+        
+        // Hibaüzenet megjelenítése
+        function showPositionError(message) {
+            const errorElement = document.getElementById('positionError');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+        
+        // Hibaüzenet elrejtése
+        function hidePositionError() {
+            document.getElementById('positionError').style.display = 'none';
+        }
+        
+        // Firefox GPS pontosság javító megoldás
+        function startFirefoxPositionTracking() {
+            console.log("Firefox GPS optimalizált követés indítása");
+            
+            // 1. PRÓBÁLKOZÁS: Extrém beállításokkal
+            try {
+                watchId = navigator.geolocation.watchPosition(
+                    position => {
+                        processPosition(position);
+                    },
+                    error => {
+                        handlePositionError(error);
+                        // Ha az extrém mód nem működik, próbáljunk normál módot
+                        if (isFirefox) {
+                            setTimeout(startNormalPositionTracking, 1000);
+                        }
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 0, // ABSZOLÚT FRISS
+                        timeout: 30000 // Hosszú timeout Firefox-nak
+                    }
+                );
+                
+                // Extra: Kényszerített getCurrentPosition időnként
+                setInterval(() => {
+                    navigator.geolocation.getCurrentPosition(
+                        position => {
+                            processPosition(position);
+                        },
+                        error => console.log("Firefox polling hiba:", error),
+                        {
+                            enableHighAccuracy: true,
+                            maximumAge: 0,
+                            timeout: 10000
+                        }
+                    );
+                }, 2000); // 2 másodpercenként
+                
+            } catch (error) {
+                console.error("Firefox extrém mód hiba:", error);
+                startNormalPositionTracking();
+            }
+        }
+        
+        // Normál pozíció követés
+        function startNormalPositionTracking() {
+            console.log("Normál pozíció követés indítása");
+            
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+            
+            watchId = navigator.geolocation.watchPosition(
+                position => {
+                    processPosition(position);
+                },
+                handlePositionError,
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 1000,
+                    timeout: 10000
+                }
+            );
+        }
+        
+        // GPS kényszerítése (agresszív mód)
+        function forceGpsTracking() {
+            console.log("GPS KÉNYSZERÍTÉS aktiválva");
+            forceGpsMode = true;
+            
+            // Állítsuk le a korábbi követést
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            
+            // Különböző beállításokkal próbálkozunk sorban
+            const gpsOptions = [
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }, // Extrém
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 }, // Még extrémebb
+                { enableHighAccuracy: false, maximumAge: 0, timeout: 30000 }, // Nem high accuracy
+            ];
+            
+            let attempt = 0;
+            
+            function tryNextOption() {
+                if (attempt >= gpsOptions.length) {
+                    console.log("Minden GPS opció kipróbálva, vissza normál mód");
+                    forceGpsMode = false;
+                    startNormalPositionTracking();
+                    return;
+                }
+                
+                const options = gpsOptions[attempt];
+                console.log(`GPS kényszerítés próba ${attempt + 1}:`, options);
+                
+                watchId = navigator.geolocation.watchPosition(
+                    position => {
+                        console.log(`GPS kényszerítés ${attempt + 1} sikeres, pontosság: ${position.coords.accuracy}m`);
+                        processPosition(position);
+                    },
+                    error => {
+                        console.log(`GPS kényszerítés ${attempt + 1} hiba:`, error);
+                        attempt++;
+                        setTimeout(tryNextOption, 1000);
+                    },
+                    options
+                );
+                
+                // 5 másodperc múlva ellenőrizzük
+                setTimeout(() => {
+                    if (userLatLng === null) {
+                        console.log(`GPS kényszerítés ${attempt + 1} időtúllépés`);
+                        navigator.geolocation.clearWatch(watchId);
+                        attempt++;
+                        tryNextOption();
+                    }
+                }, 5000);
+            }
+            
+            tryNextOption();
+        }
+        
+        // ... (rest of existing functions remain the same, just ensure they're in the right order) ...
+        
+        // Távolság számítása két pont között (2D síkban, egyszerűsítve)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            // A Föld sugara méterben
+            const R = 6371000;
+            
+            // Átalakítás radiánba
+            const lat1Rad = lat1 * Math.PI / 180;
+            const lat2Rad = lat2 * Math.PI / 180;
+            const deltaLat = (lat2 - lat1) * Math.PI / 180;
+            const deltaLon = (lon2 - lon1) * Math.PI / 180;
+            
+            // Haversine formula
+            const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+                      Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+                      Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distance = R * c;
+            
+            return distance;
+        }
+        
+        // ... (continue with all other existing functions in their original order) ...
         
         // Event Listeners for new features
         document.getElementById('sourceInternal').addEventListener('click', switchToInternalGPS);
@@ -925,6 +1261,8 @@
             
             // Initialize NMEA parser
             nmeaParser = new NMEAParser();
+            
+            // ... (rest of existing initialization) ...
         });
         
         // Clean up on page unload
@@ -933,7 +1271,7 @@
             disconnectBluetooth();
         });
         
-        // ... (rest of existing JavaScript code remains the same) ...
+        // ... (rest of existing code remains the same) ...
     </script>
 </body>
 </html>
