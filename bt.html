@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth GPS Olvasó</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0d3b66 0%, #1a5f7a 100%);
+            color: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #4ecdc4;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            font-size: 1.8rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: linear-gradient(to right, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+            margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(to right, #ff6b6b, #ee5a52);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(to right, #6c757d, #5a6268);
+        }
+        
+        .data-display {
+            margin-top: 20px;
+        }
+        
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .data-label {
+            font-weight: 600;
+            color: #a5d8ff;
+        }
+        
+        .data-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #ffd166;
+        }
+        
+        .coordinates {
+            font-size: 1.3rem;
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .map-container {
+            height: 300px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        
+        .status.connected {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+        
+        .status.disconnected {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: #ef9a9a;
+        }
+        
+        .status.scanning {
+            background-color: rgba(33, 150, 243, 0.2);
+            color: #90caf9;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .instructions {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .note {
+            font-style: italic;
+            color: #ffd166;
+            border-left: 3px solid #ffd166;
+            padding-left: 10px;
+            margin-top: 10px;
+        }
+        
+        .warning {
+            color: #ff6b6b;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .card {
+                min-width: 100%;
+            }
+        }
+        
+        /* Ikonok */
+        .icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            vertical-align: middle;
+        }
+        
+        .icon-bluetooth {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234ecdc4'%3E%3Cpath d='M14.88 16.29L13 18.17v-3.76l1.88 1.88zM13 5.83l1.88 1.88L13 9.59V5.83zM17 7l-4-4v3.17l2.59 2.59L13 10.17V13.5l2.59 2.59L13 18.17V22l4-4-2.41-2.41L17 12.41l2.41 2.41L17 17l4 4v-7l-4-4zM7 7l4 4V5.83L8.41 8.41 7 7zm0 10l2.41-2.41L11 14.83v4.34L7 17l4-4v3.17l-1.88-1.88L7 17z'/%3E%3C/svg%3E");
+        }
+        
+        .icon-gps {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234ecdc4'%3E%3Cpath d='M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E");
+        }
+        
+        .icon-map {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234ecdc4'%3E%3Cpath d='M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z'/%3E%3C/svg%3E");
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><span class="icon icon-bluetooth"></span> Bluetooth GPS Olvasó</h1>
+            <p class="subtitle">Csatlakoztass Bluetooth GPS eszközt, és olvasd ki a helymeghatározási adatokat közvetlenül a böngésződben. Az alkalmazás a Web Bluetooth API-t használja.</p>
+        </header>
+        
+        <div class="status disconnected" id="connectionStatus">
+            <i class="fas fa-plug"></i> Nincs csatlakoztatva GPS eszköz
+        </div>
+        
+        <div class="main-content">
+            <div class="card">
+                <h2 class="card-title"><span class="icon icon-bluetooth"></span> Bluetooth Kapcsolat</h2>
+                <p>Csatlakozz Bluetooth GPS eszközhöz az alábbi gombra kattintva. A böngésződ megkérdezi, melyik eszközhöz szeretnél csatlakozni.</p>
+                
+                <div class="data-display">
+                    <div class="data-item">
+                        <span class="data-label">Eszköz neve:</span>
+                        <span class="data-value" id="deviceName">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Kapcsolat állapota:</span>
+                        <span class="data-value" id="deviceStatus">Nem csatlakoztatva</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Utolsó frissítés:</span>
+                        <span class="data-value" id="lastUpdate">-</span>
+                    </div>
+                </div>
+                
+                <button class="btn" id="connectBtn">
+                    <i class="fas fa-bluetooth"></i> Csatlakozás GPS eszközhöz
+                </button>
+                <button class="btn btn-secondary" id="disconnectBtn" disabled>
+                    <i class="fas fa-ban"></i> Kapcsolat bontása
+                </button>
+                <button class="btn btn-secondary" id="simulateBtn">
+                    <i class="fas fa-location-dot"></i> Szimulált GPS adatok
+                </button>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title"><span class="icon icon-gps"></span> GPS Adatok</h2>
+                <div class="coordinates" id="coordinates">
+                    0.0000° N, 0.0000° E
+                </div>
+                
+                <div class="data-display">
+                    <div class="data-item">
+                        <span class="data-label">Szélesség:</span>
+                        <span class="data-value" id="latitude">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Hosszúság:</span>
+                        <span class="data-value" id="longitude">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Magasság:</span>
+                        <span class="data-value" id="altitude">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Sebesség:</span>
+                        <span class="data-value" id="speed">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Pontosság:</span>
+                        <span class="data-value" id="accuracy">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Műholdak száma:</span>
+                        <span class="data-value" id="satellites">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title"><span class="icon icon-map"></span> Helyszín megjelenítése</h2>
+            <div class="map-container" id="mapContainer">
+                <div id="mapPlaceholder">
+                    <p><i class="fas fa-map-location-dot fa-3x" style="color: #4ecdc4; margin-bottom: 15px;"></i></p>
+                    <p>A térkép itt jelenik meg a GPS pozíció alapján</p>
+                    <p class="note">Megjegyzés: Valós alkalmazásban integrálható egy térképszolgáltatás (pl. Google Maps, OpenStreetMap)</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3><i class="fas fa-info-circle"></i> Használati útmutató</h3>
+            <ol>
+                <li>Ellenőrizd, hogy a Bluetooth GPS eszközöd be van kapcsolva és látható módban van</li>
+                <li>Kattints a "Csatlakozás GPS eszközhöz" gombra</li>
+                <li>A böngésző megjeleníti az elérhető Bluetooth eszközök listáját - válaszd ki a GPS eszközöd</li>
+                <li>Az alkalmazás megjeleníti a GPS adatokat, amint azok érkeznek</li>
+                <li>Ha nincs Bluetooth GPS eszközöd, használhatod a "Szimulált GPS adatok" gombot a teszteléshez</li>
+            </ol>
+            
+            <div class="warning">
+                <i class="fas fa-exclamation-triangle"></i> Fontos: A Web Bluetooth API-t nem minden böngésző támogatja teljes mértékben. Jelenleg a Chrome, Edge és Opera böngészők a legjobb kompatibilitást kínálják.
+            </div>
+            
+            <div class="note">
+                Megjegyzés: A valós GPS adatok olvasásához a Bluetooth eszköznek támogatnia kell a "Location and Navigation" szolgáltatást, és a böngészőnek képesnek kell lennie kommunikálni vele. Lehetséges, hogy egyes GPS eszközök nem kompatibilisek a Web Bluetooth API-val.
+            </div>
+        </div>
+        
+        <footer>
+            <p>Bluetooth GPS Olvasó &copy; 2023 | Web Bluetooth API demonstráció</p>
+            <p>Ez egy demonstrációs alkalmazás, amely a böngésző Web Bluetooth API-ját használja.</p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM elemek
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const simulateBtn = document.getElementById('simulateBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const deviceName = document.getElementById('deviceName');
+        const deviceStatus = document.getElementById('deviceStatus');
+        const lastUpdate = document.getElementById('lastUpdate');
+        const coordinates = document.getElementById('coordinates');
+        const latitude = document.getElementById('latitude');
+        const longitude = document.getElementById('longitude');
+        const altitude = document.getElementById('altitude');
+        const speed = document.getElementById('speed');
+        const accuracy = document.getElementById('accuracy');
+        const satellites = document.getElementById('satellites');
+        const mapContainer = document.getElementById('mapContainer');
+        const mapPlaceholder = document.getElementById('mapPlaceholder');
+        
+        // Web Bluetooth változók
+        let bluetoothDevice = null;
+        let gattServer = null;
+        let gpsCharacteristic = null;
+        let isConnected = false;
+        let simulationInterval = null;
+        
+        // Web Bluetooth API támogatás ellenőrzése
+        function checkBluetoothSupport() {
+            if (!navigator.bluetooth) {
+                alert("A böngészője nem támogatja a Web Bluetooth API-t. Kérjük, használjon Chrome, Edge vagy Opera böngészőt.");
+                connectBtn.disabled = true;
+                return false;
+            }
+            return true;
+        }
+        
+        // GPS adatok frissítése a felületen
+        function updateGPSData(lat, lon, alt, spd, acc, sat) {
+            // Koordináták formázása
+            const latDirection = lat >= 0 ? 'É' : 'D';
+            const lonDirection = lon >= 0 ? 'K' : 'Ny';
+            const latAbs = Math.abs(lat).toFixed(4);
+            const lonAbs = Math.abs(lon).toFixed(4);
+            
+            // Frissítés a felületen
+            coordinates.textContent = `${latAbs}° ${latDirection}, ${lonAbs}° ${lonDirection}`;
+            latitude.textContent = `${lat.toFixed(6)}°`;
+            longitude.textContent = `${lon.toFixed(6)}°`;
+            altitude.textContent = alt !== null ? `${alt.toFixed(1)} m` : '-';
+            speed.textContent = spd !== null ? `${(spd * 3.6).toFixed(1)} km/h` : '-';
+            accuracy.textContent = acc !== null ? `${acc.toFixed(1)} m` : '-';
+            satellites.textContent = sat !== null ? sat : '-';
+            
+            // Utolsó frissítés ideje
+            const now = new Date();
+            lastUpdate.textContent = now.toLocaleTimeString('hu-HU');
+            
+            // Térkép frissítése (szimulált)
+            updateMap(lat, lon);
+        }
+        
+        // Térkép frissítése (szimulált - valós alkalmazásban valódi térképszolgáltatással)
+        function updateMap(lat, lon) {
+            // Valós alkalmazásban itt integrálnád a Google Maps vagy OpenStreetMap API-t
+            mapPlaceholder.innerHTML = `
+                <p><i class="fas fa-map-marked-alt fa-3x" style="color: #4ecdc4; margin-bottom: 15px;"></i></p>
+                <p style="font-weight: bold; font-size: 1.2rem;">Szimulált térkép megjelenítése</p>
+                <p>Pozíció: ${lat.toFixed(6)}°, ${lon.toFixed(6)}°</p>
+                <p class="note" style="margin-top: 15px;">Valós alkalmazásban itt jelenne meg a tényleges térkép a pozícióval</p>
+                <div style="margin-top: 15px; width: 100%; height: 150px; background: linear-gradient(to right, #1a5f7a, #4ecdc4); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 20px; height: 20px; background-color: #ff6b6b; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>
+                </div>
+            `;
+        }
+        
+        // Kapcsolat állapotának frissítése
+        function updateConnectionStatus(connected, device = null) {
+            isConnected = connected;
+            
+            if (connected) {
+                connectionStatus.className = 'status connected';
+                connectionStatus.innerHTML = `<i class="fas fa-link"></i> Csatlakozva: ${device ? device.name : 'GPS eszköz'}`;
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                deviceStatus.textContent = 'Csatlakozva';
+                
+                if (device) {
+                    deviceName.textContent = device.name;
+                }
+            } else {
+                connectionStatus.className = 'status disconnected';
+                connectionStatus.innerHTML = '<i class="fas fa-unlink"></i> Nincs csatlakoztatva GPS eszköz';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                deviceStatus.textContent = 'Nem csatlakoztatva';
+                
+                // GPS adatok visszaállítása alapértékekre
+                if (!simulationInterval) {
+                    resetGPSData();
+                }
+            }
+        }
+        
+        // GPS adatok visszaállítása
+        function resetGPSData() {
+            coordinates.textContent = '0.0000° N, 0.0000° E';
+            latitude.textContent = '-';
+            longitude.textContent = '-';
+            altitude.textContent = '-';
+            speed.textContent = '-';
+            accuracy.textContent = '-';
+            satellites.textContent = '-';
+            lastUpdate.textContent = '-';
+            
+            mapPlaceholder.innerHTML = `
+                <p><i class="fas fa-map-location-dot fa-3x" style="color: #4ecdc4; margin-bottom: 15px;"></i></p>
+                <p>A térkép itt jelenik meg a GPS pozíció alapján</p>
+                <p class="note">Megjegyzés: Valós alkalmazásban integrálható egy térképszolgáltatás (pl. Google Maps, OpenStreetMap)</p>
+            `;
+        }
+        
+        // Bluetooth GPS eszköz csatlakoztatása
+        async function connectToGPSDevice() {
+            if (!checkBluetoothSupport()) return;
+            
+            try {
+                connectionStatus.className = 'status scanning';
+                connectionStatus.innerHTML = '<i class="fas fa-search"></i> Bluetooth eszközök keresése...';
+                
+                // GPS szolgáltatások szűrője
+                // Valós alkalmazásban a megfelelő szolgáltatás UUID-ját kell használni
+                const options = {
+                    filters: [
+                        { namePrefix: 'GPS' },
+                        { namePrefix: 'gps' },
+                        { services: ['location_and_navigation'] }
+                    ],
+                    optionalServices: ['battery_service', 'device_information']
+                };
+                
+                // Bluetooth eszköz kiválasztása
+                bluetoothDevice = await navigator.bluetooth.requestDevice(options);
+                
+                // Eseménykezelők
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                
+                // Kapcsolódás a GATT szerverhez
+                connectionStatus.innerHTML = '<i class="fas fa-sync fa-spin"></i> Kapcsolódás az eszközhöz...';
+                gattServer = await bluetoothDevice.gatt.connect();
+                
+                // Valós GPS szolgáltatás és karakterisztika lekérése
+                // Megjegyzés: A Web Bluetooth API korlátozott GPS támogatással rendelkezik
+                // Valós alkalmazásban ismerni kell a GPS eszköz szolgáltatásának UUID-ját
+                
+                updateConnectionStatus(true, bluetoothDevice);
+                
+                // Szimulált GPS adatok olvasása (mivel a valós GPS eszközök nem mindig kompatibilisek)
+                // Valós alkalmazásban itt feliratkoznál a GPS adatokra
+                startGPSSimulation();
+                
+            } catch (error) {
+                console.error('Hiba a csatlakozás során:', error);
+                connectionStatus.className = 'status disconnected';
+                connectionStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hiba: ${error.message}`;
+                updateConnectionStatus(false);
+            }
+        }
+        
+        // Kapcsolat bontása
+        function disconnectFromDevice() {
+            if (bluetoothDevice && gattServer) {
+                if (bluetoothDevice.gatt.connected) {
+                    bluetoothDevice.gatt.disconnect();
+                }
+            }
+            
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+            
+            bluetoothDevice = null;
+            gattServer = null;
+            gpsCharacteristic = null;
+            
+            updateConnectionStatus(false);
+        }
+        
+        // Szimulált GPS adatok indítása
+        function startGPSSimulation() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+            }
+            
+            // Budapest kezdő koordinátái
+            let lat = 47.4979;
+            let lon = 19.0402;
+            
+            // Szimulált GPS adatok frissítése
+            simulationInterval = setInterval(() => {
+                // Véletlen elmozdulás a jelenlegi pozícióhoz képest
+                lat += (Math.random() - 0.5) * 0.001;
+                lon += (Math.random() - 0.5) * 0.001;
+                
+                // További GPS adatok szimulálása
+                const alt = 100 + Math.random() * 50; // 100-150 m között
+                const spd = Math.random() * 5; // 0-5 m/s között
+                const acc = 5 + Math.random() * 10; // 5-15 m között
+                const sat = 5 + Math.floor(Math.random() * 7); // 5-11 között
+                
+                updateGPSData(lat, lon, alt, spd, acc, sat);
+            }, 2000);
+        }
+        
+        // Szimulált GPS adatok indítása (teszteléshez)
+        function startSimulationOnly() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+            }
+            
+            updateConnectionStatus(true, { name: 'Szimulált GPS' });
+            deviceName.textContent = 'Szimulált GPS (demo)';
+            
+            startGPSSimulation();
+        }
+        
+        // Eseménykezelő a kapcsolat megszakadásához
+        function onDisconnected() {
+            console.log('Eszköz kapcsolata megszakadt.');
+            disconnectFromDevice();
+        }
+        
+        // Inicializálás
+        function init() {
+            // Bluetooth támogatás ellenőrzése
+            checkBluetoothSupport();
+            
+            // Eseménykezelők
+            connectBtn.addEventListener('click', connectToGPSDevice);
+            disconnectBtn.addEventListener('click', disconnectFromDevice);
+            simulateBtn.addEventListener('click', startSimulationOnly);
+            
+            // Alapértelmezett állapot
+            updateConnectionStatus(false);
+            resetGPSData();
+        }
+        
+        // Alkalmazás indítása
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
