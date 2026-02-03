@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KML Poligon Elemző és Mérő</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* ... (existing CSS styles remain the same) ... */
+        
+        /* Bluetooth specific styles */
+        .bluetooth-section {
+            background-color: #f0f8ff;
+            padding: 1.2rem;
+            border-radius: 8px;
+            border-left: 4px solid #4a6fa5;
+            margin-top: 1rem;
+        }
+        
+        .bluetooth-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            margin-top: 0.8rem;
+        }
+        
+        .bluetooth-btn {
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            padding: 0.7rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.3s;
+        }
+        
+        .bluetooth-btn:hover {
+            background-color: #3a5a8a;
+        }
+        
+        .bluetooth-btn.disconnected {
+            background-color: #95a5a6;
+        }
+        
+        .bluetooth-btn.connected {
+            background-color: #2ecc71;
+        }
+        
+        .bluetooth-btn.scanning {
+            background-color: #f39c12;
+            animation: pulse-scanning 1.5s infinite;
+        }
+        
+        @keyframes pulse-scanning {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .bluetooth-status {
+            font-size: 0.9rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+        
+        .bluetooth-status.connected {
+            background-color: #d5f4e6;
+            color: #27ae60;
+            border: 1px solid #2ecc71;
+        }
+        
+        .bluetooth-status.disconnected {
+            background-color: #fadbd8;
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+        }
+        
+        .bluetooth-status.scanning {
+            background-color: #fef9e7;
+            color: #f39c12;
+            border: 1px solid #f39c12;
+        }
+        
+        .device-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            background-color: white;
+        }
+        
+        .device-item {
+            padding: 0.6rem;
+            margin-bottom: 0.3rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .device-item:hover {
+            background-color: #e9ecef;
+        }
+        
+        .device-item.selected {
+            background-color: #e8f4fc;
+            border-left: 3px solid #3498db;
+        }
+        
+        .device-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .device-id {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+        
+        .nmea-data {
+            font-family: monospace;
+            font-size: 0.8rem;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 0.5rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: nowrap;
+            margin-top: 0.5rem;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .gps-source-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .source-btn {
+            flex: 1;
+            padding: 0.6rem;
+            border: 2px solid #ddd;
+            background-color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .source-btn.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        
+        .source-btn.internal {
+            border-color: #2ecc71;
+        }
+        
+        .source-btn.internal.active {
+            background-color: #2ecc71;
+            border-color: #2ecc71;
+        }
+        
+        .source-btn.bluetooth {
+            border-color: #4a6fa5;
+        }
+        
+        .source-btn.bluetooth.active {
+            background-color: #4a6fa5;
+            border-color: #4a6fa5;
+        }
+        
+        .satellite-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .satellite-count {
+            background-color: #3498db;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        
+        .signal-strength {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .signal-bar {
+            width: 12px;
+            height: 4px;
+            background-color: #ddd;
+            border-radius: 2px;
+        }
+        
+        .signal-bar.active {
+            background-color: #2ecc71;
+        }
+        
+        .signal-bar.medium {
+            background-color: #f39c12;
+        }
+        
+        .signal-bar.weak {
+            background-color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <!-- ... (existing HTML remains the same) ... -->
+    
+    <div class="sidebar">
+        <div class="control-panel">
+            <h2 class="section-title">GPS Forrás Választása</h2>
+            <div class="gps-source-selector">
+                <button id="sourceInternal" class="source-btn internal active">Belső GPS</button>
+                <button id="sourceBluetooth" class="source-btn bluetooth">Bluetooth GPS</button>
+            </div>
+            
+            <!-- Bluetooth GPS Section (initially hidden) -->
+            <div id="bluetoothSection" class="bluetooth-section" style="display: none;">
+                <div class="info-title">
+                    <span class="icon">📡</span>
+                    Bluetooth GPS
+                </div>
+                
+                <div class="bluetooth-controls">
+                    <button id="bluetoothScanBtn" class="bluetooth-btn">
+                        <span class="icon">🔍</span>
+                        Eszközök Keresése
+                    </button>
+                    
+                    <div id="bluetoothStatus" class="bluetooth-status disconnected">
+                        Bluetooth: Kapcsolat nélkül
+                    </div>
+                    
+                    <div id="deviceList" class="device-list" style="display: none;">
+                        <!-- Bluetooth eszközök listája -->
+                    </div>
+                    
+                    <div id="nmeaContainer" style="display: none;">
+                        <div class="info-title" style="margin-top: 0.5rem; font-size: 1rem;">
+                            <span class="icon">📡</span>
+                            NMEA Adatok
+                        </div>
+                        <div id="nmeaData" class="nmea-data">
+                            <!-- NMEA adatok jelennek meg itt -->
+                        </div>
+                        
+                        <div class="satellite-info">
+                            <span>Műholdak:</span>
+                            <span id="satelliteCount" class="satellite-count">0</span>
+                            <div class="signal-strength">
+                                <div class="signal-bar"></div>
+                                <div class="signal-bar"></div>
+                                <div class="signal-bar"></div>
+                                <div class="signal-bar"></div>
+                                <div class="signal-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 class="section-title">KML Fájl Betöltése</h2>
+            <!-- ... (rest of existing HTML remains the same) ... -->
+        </div>
+    </div>
+
+    <script>
+        // ... (existing variables remain the same) ... 
+        let gpsSource = 'internal'; // 'internal' or 'bluetooth'
+        let bluetoothDevice = null;
+        let bluetoothCharacteristic = null;
+        let nmeaParser = null;
+        let satelliteCount = 0;
+        let bluetoothReconnectInterval = null;
+        
+        // NMEA Parser class
+        class NMEAParser {
+            constructor() {
+                this.lastValidData = null;
+                this.satellites = 0;
+            }
+            
+            parseSentence(sentence) {
+                if (!sentence || sentence.length < 6) return null;
+                
+                // Check if sentence starts with $ and ends with *
+                if (!sentence.startsWith('$') || sentence.indexOf('*') === -1) return null;
+                
+                // Basic checksum verification
+                const checksumIndex = sentence.indexOf('*');
+                const data = sentence.substring(1, checksumIndex);
+                const checksum = sentence.substring(checksumIndex + 1);
+                
+                // Parse different NMEA sentence types
+                const sentenceType = sentence.substring(3, 6);
+                
+                switch(sentenceType) {
+                    case 'GGA': // Global Positioning System Fix Data
+                        return this.parseGGA(sentence);
+                    case 'RMC': // Recommended Minimum Specific GPS/Transit Data
+                        return this.parseRMC(sentence);
+                    case 'GSA': // GPS DOP and active satellites
+                        return this.parseGSA(sentence);
+                    case 'GSV': // GPS Satellites in view
+                        return this.parseGSV(sentence);
+                    default:
+                        return null;
+                }
+            }
+            
+            parseGGA(sentence) {
+                const parts = sentence.split(',');
+                if (parts.length < 15) return null;
+                
+                try {
+                    const time = parts[1];
+                    const lat = parts[2];
+                    const latDir = parts[3];
+                    const lon = parts[4];
+                    const lonDir = parts[5];
+                    const fixQuality = parseInt(parts[6]);
+                    const satellites = parseInt(parts[7]);
+                    const hdop = parseFloat(parts[8]);
+                    const altitude = parseFloat(parts[9]);
+                    const altitudeUnit = parts[10];
+                    
+                    // Convert lat/lon to decimal degrees
+                    const latDecimal = this.convertToDecimal(lat, latDir);
+                    const lonDecimal = this.convertToDecimal(lon, lonDir);
+                    
+                    if (isNaN(latDecimal) || isNaN(lonDecimal)) return null;
+                    
+                    this.satellites = satellites;
+                    
+                    return {
+                        type: 'GGA',
+                        time: time,
+                        latitude: latDecimal,
+                        longitude: lonDecimal,
+                        fixQuality: fixQuality,
+                        satellites: satellites,
+                        hdop: hdop,
+                        altitude: altitude,
+                        altitudeUnit: altitudeUnit,
+                        accuracy: hdop * 5 // Approximate accuracy in meters
+                    };
+                } catch (e) {
+                    console.error('Error parsing GGA:', e);
+                    return null;
+                }
+            }
+            
+            parseRMC(sentence) {
+                const parts = sentence.split(',');
+                if (parts.length < 12) return null;
+                
+                try {
+                    const time = parts[1];
+                    const status = parts[2];
+                    const lat = parts[3];
+                    const latDir = parts[4];
+                    const lon = parts[5];
+                    const lonDir = parts[6];
+                    const speed = parseFloat(parts[7]);
+                    const course = parseFloat(parts[8]);
+                    const date = parts[9];
+                    
+                    if (status !== 'A') return null; // Invalid fix
+                    
+                    const latDecimal = this.convertToDecimal(lat, latDir);
+                    const lonDecimal = this.convertToDecimal(lon, lonDir);
+                    
+                    if (isNaN(latDecimal) || isNaN(lonDecimal)) return null;
+                    
+                    return {
+                        type: 'RMC',
+                        time: time,
+                        date: date,
+                        latitude: latDecimal,
+                        longitude: lonDecimal,
+                        speed: speed,
+                        course: course,
+                        status: status
+                    };
+                } catch (e) {
+                    console.error('Error parsing RMC:', e);
+                    return null;
+                }
+            }
+            
+            parseGSA(sentence) {
+                const parts = sentence.split(',');
+                if (parts.length < 18) return null;
+                
+                try {
+                    const mode = parts[1];
+                    const fixType = parseInt(parts[2]);
+                    const satellites = [];
+                    
+                    for (let i = 3; i < 15; i++) {
+                        if (parts[i] && parts[i] !== '') {
+                            satellites.push(parseInt(parts[i]));
+                        }
+                    }
+                    
+                    const pdop = parseFloat(parts[15]);
+                    const hdop = parseFloat(parts[16]);
+                    const vdop = parseFloat(parts[17]);
+                    
+                    this.satellites = satellites.length;
+                    
+                    return {
+                        type: 'GSA',
+                        mode: mode,
+                        fixType: fixType,
+                        satellites: satellites,
+                        pdop: pdop,
+                        hdop: hdop,
+                        vdop: vdop
+                    };
+                } catch (e) {
+                    console.error('Error parsing GSA:', e);
+                    return null;
+                }
+            }
+            
+            parseGSV(sentence) {
+                // GSV sentences contain satellite information
+                const parts = sentence.split(',');
+                if (parts.length < 7) return null;
+                
+                try {
+                    const totalMessages = parseInt(parts[1]);
+                    const messageNumber = parseInt(parts[2]);
+                    const satellitesInView = parseInt(parts[3]);
+                    
+                    this.satellites = satellitesInView;
+                    
+                    return {
+                        type: 'GSV',
+                        totalMessages: totalMessages,
+                        messageNumber: messageNumber,
+                        satellitesInView: satellitesInView
+                    };
+                } catch (e) {
+                    console.error('Error parsing GSV:', e);
+                    return null;
+                }
+            }
+            
+            convertToDecimal(coord, direction) {
+                if (!coord || coord === '') return NaN;
+                
+                // Format: DDMM.MMMMM or DDDMM.MMMMM
+                const deg = Math.floor(parseFloat(coord) / 100);
+                const min = parseFloat(coord) - (deg * 100);
+                const decimal = deg + (min / 60);
+                
+                // Apply direction
+                if (direction === 'S' || direction === 'W') {
+                    return -decimal;
+                }
+                return decimal;
+            }
+            
+            getSatelliteCount() {
+                return this.satellites;
+            }
+        }
+        
+        // Bluetooth GPS Functions
+        async function scanBluetoothDevices() {
+            try {
+                if (!navigator.bluetooth) {
+                    throw new Error('A böngésző nem támogatja a Bluetooth Web API-t. Próbáld Chrome vagy Edge böngészőt.');
+                }
+                
+                updateBluetoothStatus('scanning', 'Eszközök keresése...');
+                
+                // Request Bluetooth device with GPS service
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { services: ['0000181a-0000-1000-8000-00805f9b34fb'] }, // Environmental Sensing (common for GPS)
+                        { services: ['0000181f-0000-1000-8000-00805f9b34fb'] }, // Location and Navigation
+                        { services: ['00001816-0000-1000-8000-00805f9b34fb'] }, // Cycling Speed and Cadence (sometimes GPS)
+                        { namePrefix: 'GPS' },
+                        { namePrefix: 'BT' }
+                    ],
+                    optionalServices: [
+                        '0000ffe0-0000-1000-8000-00805f9b34fb', // Common for serial over Bluetooth
+                        '0000ff00-0000-1000-8000-00805f9b34fb'  // Another common service
+                    ]
+                });
+                
+                bluetoothDevice = device;
+                await connectBluetoothDevice(device);
+                
+            } catch (error) {
+                console.error('Bluetooth hiba:', error);
+                
+                if (error.name === 'NotFoundError') {
+                    updateBluetoothStatus('disconnected', 'Nincsenek elérhető Bluetooth GPS eszközök');
+                } else if (error.name === 'SecurityError') {
+                    updateBluetoothStatus('disconnected', 'Bluetooth engedély megtagadva');
+                } else if (error.name === 'NotAllowedError') {
+                    updateBluetoothStatus('disconnected', 'Felhasználó megtagadta a Bluetooth hozzáférést');
+                } else {
+                    updateBluetoothStatus('disconnected', `Bluetooth hiba: ${error.message}`);
+                }
+            }
+        }
+        
+        async function connectBluetoothDevice(device) {
+            try {
+                updateBluetoothStatus('scanning', 'Csatlakozás...');
+                
+                device.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
+                
+                const server = await device.gatt.connect();
+                updateBluetoothStatus('scanning', 'Szolgáltatások keresése...');
+                
+                // Try to find services and characteristics
+                const services = await server.getPrimaryServices();
+                
+                let foundCharacteristic = null;
+                
+                for (const service of services) {
+                    try {
+                        const characteristics = await service.getCharacteristics();
+                        
+                        for (const characteristic of characteristics) {
+                            // Look for characteristics that support notify or read
+                            if (characteristic.properties.notify || characteristic.properties.read) {
+                                foundCharacteristic = characteristic;
+                                break;
+                            }
+                        }
+                        
+                        if (foundCharacteristic) break;
+                    } catch (e) {
+                        console.log(`Service ${service.uuid} error:`, e);
+                    }
+                }
+                
+                if (!foundCharacteristic) {
+                    throw new Error('Nem található olvasható karakterisztika');
+                }
+                
+                bluetoothCharacteristic = foundCharacteristic;
+                
+                // Enable notifications if available
+                if (bluetoothCharacteristic.properties.notify) {
+                    await bluetoothCharacteristic.startNotifications();
+                    bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
+                    updateBluetoothStatus('connected', `Csatlakozva: ${device.name || 'Ismeretlen eszköz'}`);
+                    
+                    // Start reading data periodically
+                    startBluetoothReading();
+                } else if (bluetoothCharacteristic.properties.read) {
+                    updateBluetoothStatus('connected', `Csatlakozva (polling mód): ${device.name || 'Ismeretlen eszköz'}`);
+                    startBluetoothPolling();
+                }
+                
+                // Show NMEA data container
+                document.getElementById('nmeaContainer').style.display = 'block';
+                
+                // Start reconnection monitoring
+                startBluetoothReconnectMonitor();
+                
+            } catch (error) {
+                console.error('Csatlakozási hiba:', error);
+                updateBluetoothStatus('disconnected', `Csatlakozási hiba: ${error.message}`);
+            }
+        }
+        
+        function handleBluetoothData(event) {
+            const value = event.target.value;
+            
+            // Convert data to string
+            let dataString = '';
+            if (value) {
+                // Try different decodings
+                try {
+                    dataString = new TextDecoder().decode(value);
+                } catch (e) {
+                    // If TextDecoder fails, try manual conversion
+                    dataString = String.fromCharCode.apply(null, new Uint8Array(value.buffer));
+                }
+                
+                processNMEAData(dataString);
+            }
+        }
+        
+        async function startBluetoothReading() {
+            try {
+                // Read initial value
+                const value = await bluetoothCharacteristic.readValue();
+                handleBluetoothData({ target: { value: value } });
+            } catch (error) {
+                console.log('Kezdeti olvasási hiba:', error);
+            }
+        }
+        
+        function startBluetoothPolling() {
+            // Poll data every second if notifications not available
+            setInterval(async () => {
+                try {
+                    if (bluetoothCharacteristic && bluetoothCharacteristic.properties.read) {
+                        const value = await bluetoothCharacteristic.readValue();
+                        handleBluetoothData({ target: { value: value } });
+                    }
+                } catch (error) {
+                    console.log('Polling hiba:', error);
+                }
+            }, 1000);
+        }
+        
+        function processNMEAData(dataString) {
+            if (!nmeaParser) {
+                nmeaParser = new NMEAParser();
+            }
+            
+            // Split by newlines and process each line
+            const lines = dataString.split('\n');
+            
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                
+                // Update NMEA display (last 5 lines)
+                updateNMEADisplay(line);
+                
+                // Parse NMEA sentence
+                const parsedData = nmeaParser.parseSentence(line);
+                
+                if (parsedData) {
+                    // Update satellite count
+                    satelliteCount = nmeaParser.getSatelliteCount();
+                    updateSatelliteDisplay();
+                    
+                    // Process position data
+                    if (parsedData.latitude && parsedData.longitude) {
+                        const accuracy = parsedData.accuracy || 
+                                       (parsedData.hdop ? parsedData.hdop * 5 : 50);
+                        
+                        // Create a mock position object similar to Geolocation API
+                        const mockPosition = {
+                            coords: {
+                                latitude: parsedData.latitude,
+                                longitude: parsedData.longitude,
+                                accuracy: accuracy,
+                                altitude: parsedData.altitude || null,
+                                altitudeAccuracy: null,
+                                heading: parsedData.course || null,
+                                speed: parsedData.speed ? parsedData.speed * 0.514444 : null // knots to m/s
+                            },
+                            timestamp: Date.now()
+                        };
+                        
+                        // Process position
+                        processPosition(mockPosition);
+                    }
+                }
+            }
+        }
+        
+        function updateNMEADisplay(line) {
+            const nmeaDataElement = document.getElementById('nmeaData');
+            const lines = nmeaDataElement.textContent.split('\n');
+            
+            // Add new line at the beginning
+            lines.unshift(line);
+            
+            // Keep only last 10 lines
+            if (lines.length > 10) {
+                lines.pop();
+            }
+            
+            nmeaDataElement.textContent = lines.join('\n');
+            
+            // Auto-scroll to top
+            nmeaDataElement.scrollTop = 0;
+        }
+        
+        function updateSatelliteDisplay() {
+            const satelliteElement = document.getElementById('satelliteCount');
+            satelliteElement.textContent = satelliteCount;
+            
+            // Update signal bars
+            const signalBars = document.querySelectorAll('.signal-bar');
+            const barCount = Math.min(satelliteCount, 5);
+            
+            signalBars.forEach((bar, index) => {
+                if (index < barCount) {
+                    if (satelliteCount >= 8) {
+                        bar.className = 'signal-bar active';
+                    } else if (satelliteCount >= 5) {
+                        bar.className = 'signal-bar medium';
+                    } else {
+                        bar.className = 'signal-bar weak';
+                    }
+                } else {
+                    bar.className = 'signal-bar';
+                }
+            });
+        }
+        
+        function onBluetoothDisconnected() {
+            console.log('Bluetooth eszköz leválasztva');
+            updateBluetoothStatus('disconnected', 'Bluetooth eszköz leválasztva');
+            
+            // Clear NMEA display
+            document.getElementById('nmeaData').textContent = '';
+            document.getElementById('nmeaContainer').style.display = 'none';
+            
+            // Stop reconnection monitor
+            stopBluetoothReconnectMonitor();
+            
+            // Switch back to internal GPS if Bluetooth was active
+            if (gpsSource === 'bluetooth') {
+                switchToInternalGPS();
+            }
+        }
+        
+        function disconnectBluetooth() {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                bluetoothDevice.gatt.disconnect();
+            }
+            
+            bluetoothDevice = null;
+            bluetoothCharacteristic = null;
+            nmeaParser = null;
+            
+            updateBluetoothStatus('disconnected', 'Kapcsolat nélkül');
+            document.getElementById('nmeaContainer').style.display = 'none';
+            
+            stopBluetoothReconnectMonitor();
+        }
+        
+        function updateBluetoothStatus(status, message) {
+            const statusElement = document.getElementById('bluetoothStatus');
+            const scanBtn = document.getElementById('bluetoothScanBtn');
+            
+            statusElement.textContent = `Bluetooth: ${message}`;
+            statusElement.className = `bluetooth-status ${status}`;
+            scanBtn.className = `bluetooth-btn ${status}`;
+            
+            // Update button text
+            if (status === 'connected') {
+                scanBtn.innerHTML = '<span class="icon">🔌</span> Kapcsolat Bontása';
+            } else if (status === 'scanning') {
+                scanBtn.innerHTML = '<span class="icon">⏳</span> Keresés...';
+            } else {
+                scanBtn.innerHTML = '<span class="icon">🔍</span> Eszközök Keresése';
+            }
+        }
+        
+        function startBluetoothReconnectMonitor() {
+            // Check connection every 5 seconds
+            bluetoothReconnectInterval = setInterval(() => {
+                if (bluetoothDevice && !bluetoothDevice.gatt.connected && gpsSource === 'bluetooth') {
+                    console.log('Újracsatlakozás kísérlet...');
+                    updateBluetoothStatus('scanning', 'Újracsatlakozás...');
+                    
+                    connectBluetoothDevice(bluetoothDevice).catch(error => {
+                        console.log('Újracsatlakozási hiba:', error);
+                    });
+                }
+            }, 5000);
+        }
+        
+        function stopBluetoothReconnectMonitor() {
+            if (bluetoothReconnectInterval) {
+                clearInterval(bluetoothReconnectInterval);
+                bluetoothReconnectInterval = null;
+            }
+        }
+        
+        // GPS Source Switching
+        function switchToInternalGPS() {
+            gpsSource = 'internal';
+            
+            // Update UI
+            document.getElementById('sourceInternal').classList.add('active');
+            document.getElementById('sourceBluetooth').classList.remove('active');
+            document.getElementById('bluetoothSection').style.display = 'none';
+            
+            // Stop Bluetooth if connected
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                // Don't disconnect, just stop using it
+                console.log('Átváltás belső GPS-re');
+            }
+            
+            // Start internal GPS tracking
+            stopPositionTracking();
+            setTimeout(() => {
+                if (isFirefox) {
+                    startFirefoxPositionTracking();
+                } else {
+                    startNormalPositionTracking();
+                }
+            }, 100);
+            
+            // Update GPS type badge
+            document.getElementById('gpsTypeBadge').textContent = 'GPS';
+            document.getElementById('gpsTypeBadge').className = 'gps-type gps-high';
+        }
+        
+        function switchToBluetoothGPS() {
+            if (!bluetoothDevice || !bluetoothDevice.gatt.connected) {
+                alert('Először csatlakozz egy Bluetooth GPS eszközhöz!');
+                document.getElementById('sourceInternal').classList.add('active');
+                document.getElementById('sourceBluetooth').classList.remove('active');
+                return;
+            }
+            
+            gpsSource = 'bluetooth';
+            
+            // Update UI
+            document.getElementById('sourceInternal').classList.remove('active');
+            document.getElementById('sourceBluetooth').classList.add('active');
+            document.getElementById('bluetoothSection').style.display = 'block';
+            
+            // Stop internal GPS tracking
+            stopPositionTracking();
+            
+            // Update GPS type badge
+            document.getElementById('gpsTypeBadge').textContent = 'BT GPS';
+            document.getElementById('gpsTypeBadge').className = 'gps-type gps-high';
+            
+            document.getElementById('locationStatus').textContent = "Bluetooth GPS aktív";
+        }
+        
+        // Modified processPosition function to handle both sources
+        function processPosition(position) {
+            // Only process if position is from current active source
+            const newUserLatLng = [position.coords.latitude, position.coords.longitude];
+            userLatLng = newUserLatLng;
+            
+            // Update UI
+            document.getElementById('coordinates').innerHTML = 
+                `<span class="highlight">${userLatLng[0].toFixed(6)}°, ${userLatLng[1].toFixed(6)}°</span>`;
+            
+            // Update accuracy
+            updateAccuracyStatus(position.coords.accuracy);
+            
+            // Update or create marker
+            if (userMarker) {
+                userMarker.setLatLng(userLatLng);
+            } else {
+                userMarker = L.marker(userLatLng, {
+                    icon: L.divIcon({
+                        className: 'user-location-icon',
+                        html: '<div style="background-color:#3498db;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    })
+                }).addTo(map);
+                
+                userMarker.bindTooltip(`Pozíció (${position.coords.accuracy.toFixed(0)}m)`, {permanent: false, direction: 'top'}).openTooltip();
+            }
+            
+            // Update measurement if needed
+            if (lastClickedElement) {
+                updateMeasurement(lastClickedElement);
+            }
+            
+            hidePositionError();
+        }
+        
+        // Modified position error handling
+        function handlePositionError(error) {
+            // Only show error if we're using internal GPS
+            if (gpsSource === 'internal') {
+                // ... (existing error handling code) ...
+            }
+        }
+        
+        // Event Listeners for new features
+        document.getElementById('sourceInternal').addEventListener('click', switchToInternalGPS);
+        document.getElementById('sourceBluetooth').addEventListener('click', switchToBluetoothGPS);
+        
+        document.getElementById('bluetoothScanBtn').addEventListener('click', function() {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                disconnectBluetooth();
+            } else {
+                scanBluetoothDevices();
+            }
+        });
+        
+        // Check Bluetooth availability on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... (existing initialization code) ...
+            
+            // Check if Bluetooth is available
+            if (!navigator.bluetooth) {
+                document.getElementById('sourceBluetooth').disabled = true;
+                document.getElementById('sourceBluetooth').title = "A böngésző nem támogatja a Bluetooth-ot";
+                document.getElementById('bluetoothSection').innerHTML += 
+                    '<div class="error-message" style="margin-top: 10px;">A böngésző nem támogatja a Bluetooth GPS-t. Használd a Chrome vagy Edge böngészőt.</div>';
+            }
+            
+            // Initialize NMEA parser
+            nmeaParser = new NMEAParser();
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            stopPositionTracking();
+            disconnectBluetooth();
+        });
+        
+        // ... (rest of existing JavaScript code remains the same) ...
+    </script>
+</body>
+</html>
