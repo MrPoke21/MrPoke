@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bluetooth GPS Olvasó</title>
+    <title>Bluetooth GPS Olvasó - PX1122R támogatással</title>
     <style>
         * {
             box-sizing: border-box;
@@ -116,6 +116,10 @@
             background: linear-gradient(to right, #ffc107, #e0a800);
         }
         
+        .btn-success {
+            background: linear-gradient(to right, #28a745, #218838);
+        }
+        
         .data-display {
             margin-top: 20px;
         }
@@ -145,17 +149,6 @@
             background-color: rgba(0, 0, 0, 0.2);
             border-radius: 10px;
             margin-top: 20px;
-        }
-        
-        .map-container {
-            height: 300px;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 20px;
-            background-color: rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         
         .status {
@@ -203,29 +196,6 @@
             color: #4ecdc4;
         }
         
-        .instructions ol {
-            padding-left: 20px;
-            margin-bottom: 15px;
-        }
-        
-        .instructions li {
-            margin-bottom: 8px;
-        }
-        
-        .note {
-            font-style: italic;
-            color: #ffd166;
-            border-left: 3px solid #ffd166;
-            padding-left: 10px;
-            margin-top: 10px;
-        }
-        
-        .warning {
-            color: #ff6b6b;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-        
         .device-list {
             margin: 20px 0;
             max-height: 200px;
@@ -253,6 +223,53 @@
             border-left: 3px solid #4ecdc4;
         }
         
+        .hex-view {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 5px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .debug-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .debug-title {
+            color: #4ecdc4;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .debug-toggle {
+            background: none;
+            border: none;
+            color: #ffd166;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .px1122-info {
+            background-color: rgba(255, 215, 102, 0.1);
+            border-left: 4px solid #ffd166;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
         footer {
             text-align: center;
             padding: 20px;
@@ -275,32 +292,14 @@
                 min-width: 100%;
             }
         }
-        
-        /* Ikonok */
-        .icon {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            vertical-align: middle;
-        }
-        
-        .icon-bluetooth {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234ecdc4'%3E%3Cpath d='M14.88 16.29L13 18.17v-3.76l1.88 1.88zM13 5.83l1.88 1.88L13 9.59V5.83zM17 7l-4-4v3.17l2.59 2.59L13 10.17V13.5l2.59 2.59L13 18.17V22l4-4-2.41-2.41L17 12.41l2.41 2.41L17 17l4 4v-7l-4-4zM7 7l4 4V5.83L8.41 8.41 7 7zm0 10l2.41-2.41L11 14.83v4.34L7 17l4-4v3.17l-1.88-1.88L7 17z'/%3E%3C/svg%3E");
-        }
-        
-        .icon-gps {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234ecdc4'%3E%3Cpath d='M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E");
-        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><span class="icon icon-bluetooth"></span> Bluetooth GPS Olvasó</h1>
-            <p class="subtitle">Csatlakozz Bluetooth GPS eszközhöz vagy bármely más Bluetooth eszközhöz a Web Bluetooth API segítségével</p>
+            <h1><i class="fas fa-satellite"></i> Bluetooth GPS Olvasó</h1>
+            <p class="subtitle">PX1122R GPS modul támogatással. Különleges karakterkódolású eszközök kezelése.</p>
         </header>
         
         <div class="status disconnected" id="connectionStatus">
@@ -309,13 +308,21 @@
         
         <div class="main-content">
             <div class="card">
-                <h2 class="card-title"><span class="icon icon-bluetooth"></span> Bluetooth Kapcsolat</h2>
-                <p>Válassz a felfedezett eszközök közül, vagy használj már párosított eszközt:</p>
+                <h2 class="card-title"><i class="fas fa-bluetooth"></i> Bluetooth Kapcsolat</h2>
+                
+                <div class="px1122-info">
+                    <h3><i class="fas fa-microchip"></i> PX1122R GPS Modul</h3>
+                    <p>Az eszköz neve hibásan jelenhet meg a speciális karakterkódolás miatt. A modul általában NMEA 0183 szabványú adatokat küld.</p>
+                </div>
                 
                 <div class="data-display">
                     <div class="data-item">
                         <span class="data-label">Eszköz neve:</span>
                         <span class="data-value" id="deviceName">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Eszköz ID:</span>
+                        <span class="data-value" id="deviceId">-</span>
                     </div>
                     <div class="data-item">
                         <span class="data-label">Kapcsolat állapota:</span>
@@ -334,19 +341,27 @@
                 <button class="btn" id="scanBtn">
                     <i class="fas fa-search"></i> Bluetooth eszközök keresése
                 </button>
-                <button class="btn btn-warning" id="pairedBtn">
-                    <i class="fas fa-link"></i> Párosított eszköz használata
+                <button class="btn btn-success" id="scanPx1122Btn">
+                    <i class="fas fa-satellite-dish"></i> PX1122R modul keresése
                 </button>
                 <button class="btn btn-secondary" id="disconnectBtn" disabled>
                     <i class="fas fa-ban"></i> Kapcsolat bontása
                 </button>
-                <button class="btn btn-secondary" id="simulateBtn">
+                <button class="btn btn-warning" id="simulateBtn">
                     <i class="fas fa-location-dot"></i> Szimulált GPS adatok
                 </button>
+                
+                <div class="debug-info" id="debugInfo" style="display: none;">
+                    <div class="debug-title">
+                        <span>Debug információk</span>
+                        <button class="debug-toggle" onclick="toggleDebugInfo()">[Bezárás]</button>
+                    </div>
+                    <div id="debugContent"></div>
+                </div>
             </div>
             
             <div class="card">
-                <h2 class="card-title"><span class="icon icon-gps"></span> GPS Adatok</h2>
+                <h2 class="card-title"><i class="fas fa-map-marked-alt"></i> GPS Adatok</h2>
                 <div class="coordinates" id="coordinates">
                     0.0000° N, 0.0000° E
                 </div>
@@ -373,57 +388,79 @@
                         <span class="data-value" id="accuracy">-</span>
                     </div>
                     <div class="data-item">
-                        <span class="data-label">Időbélyeg:</span>
+                        <span class="data-label">Műholdak:</span>
+                        <span class="data-value" id="satellites">-</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Idő:</span>
                         <span class="data-value" id="timestamp">-</span>
+                    </div>
+                </div>
+                
+                <div class="data-display" style="margin-top: 20px;">
+                    <div class="data-item">
+                        <span class="data-label">NMEA üzenet:</span>
+                        <span class="data-value" id="nmeaMessage">-</span>
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="instructions">
-            <h3><i class="fas fa-info-circle"></i> Fontos tudnivalók a Web Bluetooth API-ról</h3>
-            <ol>
-                <li><strong>Hogyan működik a böngésző Bluetooth támogatása?</strong>
-                    <p>A Web Bluetooth API nem listázza a párosított eszközöket. Ehelyett egy böngésző ablakban jeleníti meg az elérhető eszközöket, ahol manuálisan kell kiválasztani az eszközt.</p>
-                </li>
-                <li><strong>Lépések az eszköz csatlakoztatásához:</strong>
-                    <ol>
-                        <li>Kattints a "Bluetooth eszközök keresése" gombra</li>
-                        <li>A böngésző megjelenít egy párbeszédablakot az elérhető eszközökkel</li>
-                        <li>Válaszd ki a kívánt eszközt (lehet, hogy először párosítani kell)</li>
-                        <li>A böngésző megkérdezi, hogy engedélyezed-e a kapcsolódást</li>
-                    </ol>
-                </li>
-                <li><strong>Korlátozások:</strong>
-                    <ul>
-                        <li>Csak biztonságos kontextusban működik (HTTPS vagy localhost)</li>
-                        <li>Felhasználói interakció szükséges (nem indulhat automatikusan)</li>
-                        <li>Nem minden Bluetooth profil támogatott</li>
+            <h3><i class="fas fa-info-circle"></i> PX1122R GPS modul konfiguráció</h3>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 15px;">
+                <div style="flex: 1; min-width: 250px;">
+                    <h4><i class="fas fa-cog"></i> Bluetooth beállítások</h4>
+                    <ul style="padding-left: 20px;">
+                        <li>Eszköz neve: PX1122R-EVB (vagy hasonló)</li>
+                        <li>Bluetooth verzió: 2.1+EDR vagy 4.0</li>
+                        <li>Adatátvitel: SPP (Serial Port Profile)</li>
+                        <li>Baud rate: 9600 (alapértelmezett)</li>
                     </ul>
-                </li>
-                <li><strong>Támogatott böngészők:</strong> Chrome, Edge, Opera (teljes), Firefox, Safari (korlátozott)</li>
+                </div>
+                
+                <div style="flex: 1; min-width: 250px;">
+                    <h4><i class="fas fa-satellite"></i> GPS konfiguráció</h4>
+                    <ul style="padding-left: 20px;">
+                        <li>Formátum: NMEA 0183</li>
+                        <li>Üzenetek: GGA, RMC, GSA, GSV</li>
+                        <li>Frissítési ráta: 1Hz (alapértelmezett)</li>
+                        <li>Műholdrendszer: GPS, GLONASS</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h4 style="margin-top: 20px;"><i class="fas fa-question-circle"></i> Gyakori problémák és megoldások</h4>
+            <ol style="padding-left: 20px; margin-top: 10px;">
+                <li><strong>Hibás eszköznév:</strong> A PX1122R modul nem szabványos karakterkódolást használhat. Próbáld ki a "PX1122R modul keresése" gombot.</li>
+                <li><strong>Nem található eszköz:</strong> Ellenőrizd, hogy a modul látható módban van-e (pairing mód).</li>
+                <li><strong>Nincs adat:</strong> A modulnak szabad ég alatt kell lennie műholdjelek fogadásához.</li>
+                <li><strong>Kapcsolódási hiba:</strong> Próbáld meg újraindítani a modult és/vagy a böngészőt.</li>
             </ol>
             
-            <div class="warning">
-                <i class="fas fa-exclamation-triangle"></i> Fontos: A Bluetooth GPS adatok olvasásához az eszköznek támogatnia kell a megfelelő GATT szolgáltatásokat. A szimulált mód segít tesztelni az alkalmazást, ha nincs kompatibilis GPS eszközöd.
+            <div style="background-color: rgba(255, 107, 107, 0.1); padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #ff6b6b;">
+                <h4><i class="fas fa-exclamation-triangle"></i> Fontos megjegyzések</h4>
+                <p>A Web Bluetooth API korlátozottan támogatja a SPP (Serial Port Profile) profilokat. A PX1122R modul valószínűleg ezt a profilt használja, ami nem minden böngészőben működik megfelelően. Ha nem sikerül csatlakozni, próbáld meg a Chrome böngészőt.</p>
             </div>
         </div>
         
         <footer>
-            <p>Bluetooth GPS Olvasó &copy; 2023 | Web Bluetooth API demonstráció</p>
-            <p>Ez egy demonstrációs alkalmazás, amely a böngésző Web Bluetooth API-ját használja.</p>
+            <p>Bluetooth GPS Olvasó &copy; 2023 | PX1122R GPS modul támogatással</p>
+            <p>Ez egy demonstrációs alkalmazás a Web Bluetooth API teszteléséhez.</p>
         </footer>
     </div>
 
     <script>
         // DOM elemek
         const scanBtn = document.getElementById('scanBtn');
-        const pairedBtn = document.getElementById('pairedBtn');
+        const scanPx1122Btn = document.getElementById('scanPx1122Btn');
         const disconnectBtn = document.getElementById('disconnectBtn');
         const simulateBtn = document.getElementById('simulateBtn');
         const connectionStatus = document.getElementById('connectionStatus');
         const deviceList = document.getElementById('deviceList');
         const deviceName = document.getElementById('deviceName');
+        const deviceId = document.getElementById('deviceId');
         const deviceStatus = document.getElementById('deviceStatus');
         const lastUpdate = document.getElementById('lastUpdate');
         const coordinates = document.getElementById('coordinates');
@@ -432,7 +469,11 @@
         const altitude = document.getElementById('altitude');
         const speed = document.getElementById('speed');
         const accuracy = document.getElementById('accuracy');
+        const satellites = document.getElementById('satellites');
         const timestamp = document.getElementById('timestamp');
+        const nmeaMessage = document.getElementById('nmeaMessage');
+        const debugInfo = document.getElementById('debugInfo');
+        const debugContent = document.getElementById('debugContent');
         
         // Web Bluetooth változók
         let bluetoothDevice = null;
@@ -440,24 +481,87 @@
         let isConnected = false;
         let simulationInterval = null;
         let discoveredDevices = [];
+        let gpsCharacteristic = null;
+        let debugLog = [];
         
-        // Web Bluetooth API támogatás ellenőrzése
-        function checkBluetoothSupport() {
-            if (!navigator.bluetooth) {
-                alert("A böngészője nem támogatja a Web Bluetooth API-t. Kérjük, használjon Chrome, Edge vagy Opera böngészőt.");
-                scanBtn.disabled = true;
-                pairedBtn.disabled = true;
-                return false;
+        // Debug információk mutatása/elrejtése
+        function toggleDebugInfo() {
+            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Debug információk hozzáadása
+        function addDebugInfo(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString('hu-HU');
+            const logEntry = {
+                time: timestamp,
+                message: message,
+                data: data
+            };
+            
+            debugLog.push(logEntry);
+            
+            // Csak az utolsó 10 bejegyzést tartjuk meg
+            if (debugLog.length > 10) {
+                debugLog.shift();
             }
             
-            // Ellenőrizzük, hogy a böngészőben engedélyezve van-e a Bluetooth
-            navigator.bluetooth.getAvailability().then(available => {
-                if (!available) {
-                    console.log("Bluetooth nem elérhető ezen az eszközön");
+            // Debug információk frissítése
+            updateDebugDisplay();
+        }
+        
+        // Debug információk megjelenítése
+        function updateDebugDisplay() {
+            debugContent.innerHTML = debugLog.map(entry => {
+                let dataStr = '';
+                if (entry.data) {
+                    if (typeof entry.data === 'object') {
+                        dataStr = JSON.stringify(entry.data, null, 2);
+                    } else {
+                        dataStr = entry.data.toString();
+                    }
                 }
+                
+                return `<div style="margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                    <div style="color: #4ecdc4;">[${entry.time}] ${entry.message}</div>
+                    ${dataStr ? `<div style="color: #ffd166; margin-top: 5px; font-size: 0.8rem;">${dataStr}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+        
+        // Karakterlánc tisztítása (speciális PX1122R probléma kezelése)
+        function cleanDeviceName(name) {
+            if (!name) return 'Ismeretlen eszköz';
+            
+            // Hex dump, ha szükséges
+            addDebugInfo('Eszköznév nyers adatok:', {
+                nyers: name,
+                hossz: name.length,
+                karakterek: Array.from(name).map(c => c.charCodeAt(0).toString(16))
             });
             
-            return true;
+            // Eltávolítjuk a nem nyomtatható karaktereket
+            let cleaned = name.replace(/[^\x20-\x7E]/g, '');
+            
+            // Ha üres maradt, próbáljuk meg máshogy dekódolni
+            if (cleaned.trim() === '') {
+                // Próbáljuk UTF-8 dekódolást
+                try {
+                    const encoder = new TextEncoder();
+                    const decoder = new TextDecoder('utf-8');
+                    const bytes = encoder.encode(name);
+                    cleaned = decoder.decode(bytes);
+                    cleaned = cleaned.replace(/[^\x20-\x7E]/g, '');
+                } catch (e) {
+                    cleaned = 'PX1122R GPS Modul';
+                }
+            }
+            
+            // Ha még mindig üres, adjunk neki egy alapértelmezett nevet
+            if (cleaned.trim() === '') {
+                cleaned = 'PX1122R GPS Modul';
+            }
+            
+            return cleaned;
         }
         
         // Eszközök listájának frissítése
@@ -472,14 +576,20 @@
             devices.forEach(device => {
                 const deviceElement = document.createElement('div');
                 deviceElement.className = 'device-item';
+                
+                const displayName = cleanDeviceName(device.name);
+                
                 deviceElement.innerHTML = `
-                    <strong>${device.name || 'Ismeretlen eszköz'}</strong>
+                    <strong>${displayName}</strong>
                     <div style="font-size: 0.8rem; margin-top: 5px;">
-                        ${device.id ? `ID: ${device.id.substring(0, 8)}...` : ''}
+                        ${device.id ? `ID: ${device.id.substring(0, 12)}...` : ''}
                     </div>
+                    ${device.name !== displayName ? 
+                        `<div class="hex-view">Eredeti név: "${device.name}"</div>` : 
+                        ''}
                 `;
                 
-                deviceElement.addEventListener('click', () => {
+                deviceElement.addEventListener('click', async () => {
                     // Eltávolítjuk a korábbi kijelölést
                     document.querySelectorAll('.device-item').forEach(item => {
                         item.classList.remove('selected');
@@ -489,7 +599,7 @@
                     deviceElement.classList.add('selected');
                     
                     // Csatlakozás az eszközhöz
-                    connectToDevice(device);
+                    await connectToDevice(device);
                 });
                 
                 deviceList.appendChild(deviceElement);
@@ -497,7 +607,7 @@
         }
         
         // GPS adatok frissítése a felületen
-        function updateGPSData(lat, lon, alt, spd, acc) {
+        function updateGPSData(lat, lon, alt, spd, acc, sat, nmea = null) {
             // Koordináták formázása
             const latDirection = lat >= 0 ? 'É' : 'D';
             const lonDirection = lon >= 0 ? 'K' : 'Ny';
@@ -511,6 +621,12 @@
             altitude.textContent = alt !== null ? `${alt.toFixed(1)} m` : '-';
             speed.textContent = spd !== null ? `${(spd * 3.6).toFixed(1)} km/h` : '-';
             accuracy.textContent = acc !== null ? `${acc.toFixed(1)} m` : '-';
+            satellites.textContent = sat !== null ? sat : '-';
+            
+            // NMEA üzenet
+            if (nmea) {
+                nmeaMessage.textContent = nmea.length > 30 ? nmea.substring(0, 30) + '...' : nmea;
+            }
             
             // Időbélyeg
             const now = new Date();
@@ -524,23 +640,26 @@
             
             if (connected) {
                 connectionStatus.className = 'status connected';
-                connectionStatus.innerHTML = `<i class="fas fa-link"></i> Csatlakozva: ${device ? device.name : 'Bluetooth eszköz'}`;
+                const displayName = device ? cleanDeviceName(device.name) : 'Bluetooth eszköz';
+                connectionStatus.innerHTML = `<i class="fas fa-link"></i> Csatlakozva: ${displayName}`;
                 scanBtn.disabled = true;
-                pairedBtn.disabled = true;
+                scanPx1122Btn.disabled = true;
                 disconnectBtn.disabled = false;
                 deviceStatus.textContent = 'Csatlakozva';
                 
                 if (device) {
-                    deviceName.textContent = device.name || 'Ismeretlen eszköz';
+                    deviceName.textContent = displayName;
+                    deviceId.textContent = device.id ? device.id.substring(0, 16) + '...' : '-';
                 }
             } else {
                 connectionStatus.className = 'status disconnected';
                 connectionStatus.innerHTML = '<i class="fas fa-unlink"></i> Nincs csatlakoztatva Bluetooth eszköz';
                 scanBtn.disabled = false;
-                pairedBtn.disabled = false;
+                scanPx1122Btn.disabled = false;
                 disconnectBtn.disabled = true;
                 deviceStatus.textContent = 'Nem csatlakoztatva';
                 deviceName.textContent = '-';
+                deviceId.textContent = '-';
                 
                 // GPS adatok visszaállítása alapértékekre
                 if (!simulationInterval) {
@@ -557,8 +676,10 @@
             altitude.textContent = '-';
             speed.textContent = '-';
             accuracy.textContent = '-';
+            satellites.textContent = '-';
             timestamp.textContent = '-';
             lastUpdate.textContent = '-';
+            nmeaMessage.textContent = '-';
         }
         
         // Bluetooth eszköz csatlakoztatása
@@ -569,67 +690,160 @@
                 connectionStatus.className = 'status scanning';
                 connectionStatus.innerHTML = '<i class="fas fa-sync fa-spin"></i> Kapcsolódás az eszközhöz...';
                 
-                // Kapcsolódás az eszközhöz
-                bluetoothDevice = device;
+                addDebugInfo('Kapcsolódás eszközhöz:', {
+                    név: device.name,
+                    id: device.id,
+                    típus: device.constructor.name
+                });
                 
-                // Eseménykezelő a kapcsolat megszakadásához
-                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
-                
-                // Kapcsolódás a GATT szerverhez
-                gattServer = await bluetoothDevice.gatt.connect();
+                // Ha a device egy valós BluetoothDevice objektum (nem szimulált)
+                if (device.gatt) {
+                    bluetoothDevice = device;
+                    
+                    // Eseménykezelő a kapcsolat megszakadásához
+                    bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                    
+                    // Kapcsolódás a GATT szerverhez
+                    gattServer = await bluetoothDevice.gatt.connect();
+                    
+                    addDebugInfo('GATT szerverhez kapcsolódva');
+                    
+                    // Próbáljuk megkeresni a szolgáltatásokat
+                    try {
+                        const services = await gattServer.getPrimaryServices();
+                        addDebugInfo(`Megtalált szolgáltatások: ${services.length} db`);
+                        
+                        // Logoljuk a szolgáltatásokat
+                        for (const service of services) {
+                            addDebugInfo(`Szolgáltatás: ${service.uuid}`);
+                        }
+                        
+                        // Próbáljuk megtalálni a Serial Port szolgáltatást (PX1122R valószínűleg ezt használja)
+                        // Standard Serial Port Service UUID: 00001101-0000-1000-8000-00805f9b34fb
+                        const serialServiceUUID = '00001101-0000-1000-8000-00805f9b34fb';
+                        
+                        let serialService = null;
+                        for (const service of services) {
+                            if (service.uuid === serialServiceUUID || 
+                                service.uuid.replace(/-/g, '').toLowerCase() === serialServiceUUID.replace(/-/g, '').toLowerCase()) {
+                                serialService = service;
+                                break;
+                            }
+                        }
+                        
+                        if (serialService) {
+                            addDebugInfo('Serial Port szolgáltatás megtalálva');
+                            
+                            // Karakterisztikák lekérése
+                            const characteristics = await serialService.getCharacteristics();
+                            addDebugInfo(`Karakterisztikák: ${characteristics.length} db`);
+                            
+                            for (const char of characteristics) {
+                                addDebugInfo(`Karakterisztika: ${char.uuid}, tulajdonságok: ${char.properties}`);
+                                
+                                // Ha van notify tulajdonság, feliratkozunk rá
+                                if (char.properties.notify) {
+                                    gpsCharacteristic = char;
+                                    
+                                    // Feliratkozás az értesítésekre
+                                    await gpsCharacteristic.startNotifications();
+                                    gpsCharacteristic.addEventListener('characteristicvaluechanged', handleGPSData);
+                                    
+                                    addDebugInfo('Feliratkozva a GPS adatokra');
+                                    break;
+                                }
+                            }
+                        } else {
+                            addDebugInfo('Serial Port szolgáltatás nem található, szimulált adatokat használunk');
+                        }
+                        
+                    } catch (serviceError) {
+                        addDebugInfo('Hiba a szolgáltatások olvasásakor:', serviceError.message);
+                    }
+                    
+                } else {
+                    // Szimulált eszköz
+                    bluetoothDevice = device;
+                    addDebugInfo('Szimulált eszközhöz kapcsolódva');
+                }
                 
                 updateConnectionStatus(true, bluetoothDevice);
                 
-                // Mivel a valódi GPS adatok olvasása komplex, itt szimuláljuk
-                // Valós alkalmazásban itt kellene feliratkozni a GPS szolgáltatásra
-                console.log('Sikeresen csatlakozva:', bluetoothDevice);
-                
-                // Szimulált GPS adatok indítása (mivel a valós GPS eszközök nem mindig kompatibilisek)
-                startGPSSimulation();
-                
-                // Próbáljuk meg lekérni az alapvető eszköz információkat
-                try {
-                    const deviceInfoService = await gattServer.getPrimaryService('device_information');
-                    const modelNumberChar = await deviceInfoService.getCharacteristic('model_number_string');
-                    const modelNumberValue = await modelNumberChar.readValue();
-                    const modelNumber = new TextDecoder().decode(modelNumberValue);
-                    console.log('Eszköz modell száma:', modelNumber);
-                } catch (e) {
-                    console.log('Eszköz információk nem elérhetők:', e.message);
+                // Szimulált GPS adatok indítása (ha nem találtunk valódi GPS karakterisztikát)
+                if (!gpsCharacteristic) {
+                    startGPSSimulation();
                 }
                 
             } catch (error) {
                 console.error('Hiba a csatlakozás során:', error);
+                addDebugInfo('Hiba a kapcsolódás során:', error.message);
+                
                 connectionStatus.className = 'status disconnected';
                 connectionStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hiba: ${error.message}`;
                 updateConnectionStatus(false);
             }
         }
         
-        // Bluetooth eszközök keresése
-        async function scanForDevices() {
+        // GPS adatok kezelése (ha valódi adatok érkeznek)
+        function handleGPSData(event) {
+            const value = event.target.value;
+            
+            // Adatok dekódolása
+            const decoder = new TextDecoder();
+            const dataString = decoder.decode(value);
+            
+            addDebugInfo('GPS adat érkezett:', dataString);
+            
+            // NMEA üzenet feldolgozása (egyszerűsített)
+            // Valós implementációban itt kellene parse-olni a GGA, RMC stb. üzeneteket
+            if (dataString.includes('$GPGGA') || dataString.includes('$GPRMC')) {
+                nmeaMessage.textContent = dataString.trim();
+                
+                // Szimulált adatok frissítése (valós implementációban itt a tényleges NMEA feldolgozás lenne)
+                const now = new Date();
+                const lat = 47.4979 + (Math.random() - 0.5) * 0.01;
+                const lon = 19.0402 + (Math.random() - 0.5) * 0.01;
+                
+                updateGPSData(
+                    lat, lon,
+                    120 + Math.random() * 30,
+                    Math.random() * 5,
+                    5 + Math.random() * 10,
+                    5 + Math.floor(Math.random() * 8),
+                    dataString.trim()
+                );
+            }
+        }
+        
+        // PX1122R specifikus keresés
+        async function scanForPx1122() {
             if (!checkBluetoothSupport()) return;
             
             try {
                 connectionStatus.className = 'status scanning';
-                connectionStatus.innerHTML = '<i class="fas fa-search"></i> Bluetooth eszközök keresése...';
+                connectionStatus.innerHTML = '<i class="fas fa-satellite-dish"></i> PX1122R modul keresése...';
                 
-                // Kevesebb szűrő, hogy több eszköz jelenjen meg
+                addDebugInfo('PX1122R modul keresése indítva');
+                
+                // Különböző UUID próbálkozások a PX1122R-hez
                 const options = {
-                    // Opcionális szűrők - kommentálva, hogy minden eszköz megjelenjen
-                    // filters: [
-                    //     { services: ['battery_service'] }, // Akkumulátor szolgáltatás
-                    //     { name: 'GPS' }, // GPS nevű eszközök
-                    // ],
-                    acceptAllDevices: true, // Minden eszköz megjelenik
-                    optionalServices: ['battery_service', 'device_information'] // Opcionális szolgáltatások
+                    acceptAllDevices: true,
+                    optionalServices: [
+                        '00001101-0000-1000-8000-00805f9b34fb', // Standard Serial Port
+                        'battery_service',
+                        'device_information'
+                    ]
                 };
                 
-                // Bluetooth eszköz kiválasztása - ez megnyitja a böngésző párbeszédablakát
+                // Bluetooth eszköz kiválasztása
                 bluetoothDevice = await navigator.bluetooth.requestDevice(options);
                 
-                // Ha sikeresen kiválasztottunk egy eszközt
                 if (bluetoothDevice) {
+                    addDebugInfo('PX1122R típusú eszköz kiválasztva:', {
+                        név: bluetoothDevice.name,
+                        id: bluetoothDevice.id
+                    });
+                    
                     discoveredDevices.push(bluetoothDevice);
                     updateDeviceList(discoveredDevices);
                     
@@ -638,15 +852,12 @@
                 }
                 
             } catch (error) {
-                console.error('Hiba az eszközök keresése során:', error);
+                console.error('Hiba a PX1122R keresése során:', error);
+                addDebugInfo('Hiba a PX1122R keresése során:', error.message);
                 
-                // Felhasználó megszakította a keresést
                 if (error.name === 'NotFoundError') {
                     connectionStatus.className = 'status disconnected';
-                    connectionStatus.innerHTML = '<i class="fas fa-times-circle"></i> Nincs Bluetooth eszköz kiválasztva';
-                } else if (error.name === 'SecurityError') {
-                    connectionStatus.className = 'status disconnected';
-                    connectionStatus.innerHTML = '<i class="fas fa-shield-alt"></i> Biztonsági hiba: Nincs engedély a Bluetooth használatához';
+                    connectionStatus.innerHTML = '<i class="fas fa-times-circle"></i> Nincs PX1122R eszköz kiválasztva';
                 } else {
                     connectionStatus.className = 'status disconnected';
                     connectionStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hiba: ${error.message}`;
@@ -656,21 +867,49 @@
             }
         }
         
-        // Párosított eszköz használata (demo)
-        async function usePairedDevice() {
-            alert('Megjegyzés: A Web Bluetooth API nem kérdezheti le a már párosított eszközöket.\n\nA "Bluetooth eszközök keresése" gombbal kiválaszthatod a párosítani kívánt eszközt, majd a böngészőben végrehajthatod a párosítást.');
+        // Általános Bluetooth eszközök keresése
+        async function scanForDevices() {
+            if (!checkBluetoothSupport()) return;
             
-            // Demo: Hozzunk létre egy szimulált párosított eszközt
-            const simulatedDevice = {
-                name: 'Párosított GPS (Demo)',
-                id: 'demo-paired-device-12345'
-            };
-            
-            discoveredDevices.push(simulatedDevice);
-            updateDeviceList(discoveredDevices);
-            
-            // Kapcsolódás a szimulált eszközhöz
-            await connectToDevice(simulatedDevice);
+            try {
+                connectionStatus.className = 'status scanning';
+                connectionStatus.innerHTML = '<i class="fas fa-search"></i> Bluetooth eszközök keresése...';
+                
+                addDebugInfo('Általános Bluetooth keresés indítva');
+                
+                const options = {
+                    acceptAllDevices: true,
+                    optionalServices: ['battery_service', 'device_information']
+                };
+                
+                bluetoothDevice = await navigator.bluetooth.requestDevice(options);
+                
+                if (bluetoothDevice) {
+                    addDebugInfo('Bluetooth eszköz kiválasztva:', {
+                        név: bluetoothDevice.name,
+                        id: bluetoothDevice.id
+                    });
+                    
+                    discoveredDevices.push(bluetoothDevice);
+                    updateDeviceList(discoveredDevices);
+                    
+                    await connectToDevice(bluetoothDevice);
+                }
+                
+            } catch (error) {
+                console.error('Hiba az eszközök keresése során:', error);
+                addDebugInfo('Hiba az eszközök keresése során:', error.message);
+                
+                if (error.name === 'NotFoundError') {
+                    connectionStatus.className = 'status disconnected';
+                    connectionStatus.innerHTML = '<i class="fas fa-times-circle"></i> Nincs Bluetooth eszköz kiválasztva';
+                } else {
+                    connectionStatus.className = 'status disconnected';
+                    connectionStatus.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hiba: ${error.message}`;
+                }
+                
+                updateConnectionStatus(false);
+            }
         }
         
         // Kapcsolat bontása
@@ -678,7 +917,18 @@
             if (bluetoothDevice && bluetoothDevice.gatt) {
                 if (bluetoothDevice.gatt.connected) {
                     bluetoothDevice.gatt.disconnect();
+                    addDebugInfo('Kapcsolat bontva');
                 }
+            }
+            
+            if (gpsCharacteristic) {
+                try {
+                    gpsCharacteristic.stopNotifications();
+                    gpsCharacteristic.removeEventListener('characteristicvaluechanged', handleGPSData);
+                } catch (e) {
+                    // Figyelmen kívül hagyjuk, ha nem lehet leállítani
+                }
+                gpsCharacteristic = null;
             }
             
             if (simulationInterval) {
@@ -690,6 +940,7 @@
             gattServer = null;
             
             updateConnectionStatus(false);
+            addDebugInfo('Eszköz leválasztva');
         }
         
         // Szimulált GPS adatok indítása
@@ -709,15 +960,22 @@
                 lon += (Math.random() - 0.5) * 0.001;
                 
                 // További GPS adatok szimulálása
-                const alt = 100 + Math.random() * 50; // 100-150 m között
-                const spd = Math.random() * 5; // 0-5 m/s között
-                const acc = 5 + Math.random() * 10; // 5-15 m között
+                const alt = 100 + Math.random() * 50;
+                const spd = Math.random() * 5;
+                const acc = 5 + Math.random() * 10;
+                const sat = 5 + Math.floor(Math.random() * 8);
                 
-                updateGPSData(lat, lon, alt, spd, acc);
+                // NMEA szimuláció
+                const nmea = `$GPGGA,${new Date().toUTCString().substr(11, 8)},${Math.abs(lat).toFixed(4)},${lat >= 0 ? 'N' : 'S'},${Math.abs(lon).toFixed(4)},${lon >= 0 ? 'E' : 'W'},1,${sat},${acc.toFixed(1)},${alt.toFixed(1)},M,,M,,*00`;
+                
+                updateGPSData(lat, lon, alt, spd, acc, sat, nmea);
             }, 2000);
             
             // Azonnali frissítés
-            updateGPSData(lat, lon, 120, 2.5, 8.5);
+            const nmea = `$GPGGA,${new Date().toUTCString().substr(11, 8)},${Math.abs(lat).toFixed(4)},N,${Math.abs(lon).toFixed(4)},E,1,8,5.0,120.0,M,,M,,*00`;
+            updateGPSData(lat, lon, 120, 2.5, 5.0, 8, nmea);
+            
+            addDebugInfo('Szimulált GPS adatok indítva');
         }
         
         // Szimulált GPS adatok indítása (teszteléshez)
@@ -727,17 +985,30 @@
             }
             
             const simulatedDevice = {
-                name: 'Szimulált GPS',
-                id: 'demo-simulated-gps'
+                name: 'Szimulált PX1122R GPS',
+                id: 'demo-px1122r-simulated'
             };
             
             updateConnectionStatus(true, simulatedDevice);
             startGPSSimulation();
+            addDebugInfo('Szimulált mód indítva');
+        }
+        
+        // Web Bluetooth API támogatás ellenőrzése
+        function checkBluetoothSupport() {
+            if (!navigator.bluetooth) {
+                alert("A böngészője nem támogatja a Web Bluetooth API-t. Kérjük, használjon Chrome, Edge vagy Opera böngészőt.");
+                scanBtn.disabled = true;
+                scanPx1122Btn.disabled = true;
+                return false;
+            }
+            
+            return true;
         }
         
         // Eseménykezelő a kapcsolat megszakadásához
         function onDisconnected() {
-            console.log('Eszköz kapcsolata megszakadt.');
+            addDebugInfo('Eszköz kapcsolata megszakadt (gattserverdisconnected)');
             disconnectFromDevice();
         }
         
@@ -748,23 +1019,31 @@
             
             // Eseménykezelők
             scanBtn.addEventListener('click', scanForDevices);
-            pairedBtn.addEventListener('click', usePairedDevice);
+            scanPx1122Btn.addEventListener('click', scanForPx1122);
             disconnectBtn.addEventListener('click', disconnectFromDevice);
             simulateBtn.addEventListener('click', startSimulationOnly);
             
             // Alapértelmezett állapot
             updateConnectionStatus(false);
             resetGPSData();
-            updateDeviceList([]);
             
             // Demo eszközök a listához
             discoveredDevices = [
-                { name: 'GPS Tracker 01', id: 'demo-gps-01' },
-                { name: 'Bluetooth GPS Receiver', id: 'demo-gps-02' },
-                { name: 'Smartphone GPS (Demo)', id: 'demo-phone-gps' }
+                { name: 'PX1122R-EVB', id: 'px1122r-demo-001' },
+                { name: 'PX1122R L1/L2 GPS', id: 'px1122r-demo-002' },
+                { name: 'GPS Tracker', id: 'demo-gps-tracker' }
             ];
             
             updateDeviceList(discoveredDevices);
+            
+            // Debug információk megjelenítése
+            addDebugInfo('Alkalmazás inicializálva');
+            addDebugInfo('PX1122R GPS modul támogatással');
+            
+            // Debug információk automatikus megjelenítése
+            setTimeout(() => {
+                debugInfo.style.display = 'block';
+            }, 1000);
         }
         
         // Alkalmazás indítása
