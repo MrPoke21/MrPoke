@@ -527,7 +527,7 @@
                 };
                 
                 // Bluetooth eszköz kiválasztása
-                bluetoothDevice = await navigator.bluetooth.requestDevice(options);
+                bluetoothDevice = await navigator.bluetooth.requestDevice();
                 
                 // Eseménykezelők
                 bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
