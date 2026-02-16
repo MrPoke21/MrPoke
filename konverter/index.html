@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITRF20 (2026.0) → ETRS89 Koordináta Konverter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ITRF20 (2026.0) → ETRS89</h1>
+            <p class="subtitle">Precíziós GNSS koordináta-átátalakító rendszer</p>
+            <p class="tagline">EUREF/IERS szabványok alapján</p>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <h2>📍 Koordináta Bevitel</h2>
+                
+                <div class="input-format-help">
+                    <p>Adja meg a koordinátákat az alábbi formátumok egyikében:</p>
+                    <ul>
+                        <li><strong>DMS (szimbólumokkal):</strong> 46°38'56.33974" 20°12'3.56457" 130.560</li>
+                        <li><strong>DMS (szavakkal):</strong> 47 30 04.18 N 19 02 23.56 E 130.5</li>
+                        <li><strong>Tizedes fokozat:</strong> 47.5011611 19.0398778 130.5</li>
+                        <li><strong>Cartesian (ITRF20):</strong> 4114176.127 1381397.795 4771920.462 [2026.0]</li>
+                    </ul>
+                </div>
+
+                <div class="coord-input">
+                    <label>Koordináták:</label>
+                    <textarea id="coordInput" placeholder="Pl: 47.5011611 19.0398778 130.5" rows="3"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button onclick="convertCoordinates()" class="btn-convert">🔄 Konvertálás</button>
+                    <button onclick="clearFields()" class="btn-clear">🗑️ Törlés</button>
+                    <button onclick="loadExampleCoords()" class="btn-example">📌 Példa (Budapest)</button>
+                </div>
+            </section>
+
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>📊 Eredmények (ETRS89)</h2>
+
+                <table class="results-table">
+                    <thead>
+                        <tr class="table-category">
+                            <th colspan="2">📐 DMS Koordináták</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Szélesség (φ)</td>
+                            <td><span id="resultLatDMS">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Hosszúság (λ)</td>
+                            <td><span id="resultLonDMS">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Ellipszoid magasság</td>
+                            <td><span id="resultHeightDMS">-</span></td>
+                        </tr>
+                        <tr class="table-action">
+                            <td colspan="2"><button onclick="copyToClipboard('dms')" class="btn-copy">📋 Másolás</button></td>
+                        </tr>
+                    </tbody>
+
+                    <thead>
+                        <tr class="table-category">
+                            <th colspan="2">🔢 Tizedes Fokozat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Szélesség φ (°)</td>
+                            <td><span id="resultLatDec">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Hosszúság λ (°)</td>
+                            <td><span id="resultLonDec">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Ellipszoid magasság (m)</td>
+                            <td><span id="resultHeightDec">-</span></td>
+                        </tr>
+                        <tr class="table-action">
+                            <td colspan="2"><button onclick="copyToClipboard('decimal')" class="btn-copy">📋 Másolás</button></td>
+                        </tr>
+                    </tbody>
+
+                    <thead>
+                        <tr class="table-category">
+                            <th colspan="2">🗺️ UTM 32N Vetület</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>UTM Zóna</td>
+                            <td><span id="resultZone">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Easting (m)</td>
+                            <td><span id="resultEasting">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Northing (m)</td>
+                            <td><span id="resultNorthing">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Scale factor (ppm)</td>
+                            <td><span id="resultScaleFactor">-</span></td>
+                        </tr>
+                        <tr class="table-action">
+                            <td colspan="2"><button onclick="copyToClipboard('utm')" class="btn-copy">📋 Másolás</button></td>
+                        </tr>
+                    </tbody>
+
+                    <thead>
+                        <tr class="table-category">
+                            <th colspan="2">📦 Cartesian Koordináták (ETRS89)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>X (m)</td>
+                            <td><span id="resultX">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Y (m)</td>
+                            <td><span id="resultY">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Z (m)</td>
+                            <td><span id="resultZ">-</span></td>
+                        </tr>
+                        <tr class="table-action">
+                            <td colspan="2"><button onclick="copyToClipboard('cartesian')" class="btn-copy">📋 Másolás</button></td>
+                        </tr>
+                    </tbody>
+
+                    <thead>
+                        <tr class="table-category">
+                            <th colspan="2">📊 Transzformáció Adatai</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ITRF20 ↔ ETRS89 eltérés</td>
+                            <td><span id="resultDiff">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>3D távolság (m)</td>
+                            <td><span id="result3DDist">-</span></td>
+                        </tr>
+                        <tr>
+                            <td>Számított epoch</td>
+                            <td><span id="resultEpoch">2026.0</span></td>
+                        </tr>
+                        <tr>
+                            <td>Transzformáció módszere</td>
+                            <td><span id="resultMethod">Bursa-Wolf (7 paraméter)</span></td>
+                        </tr>
+                        <tr>
+                            <td>Pontossági osztály</td>
+                            <td><span id="resultAccuracyClass">±1-2 cm</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="info-box">
+                    <p><strong>Megjegyzés:</strong> Az eltérés az ITRF20 (2026.0) és az ETRS89 között 1-2 cm nagyságrendű. A transzformáció az EUREF TB-2018 ajánlások alapján.</p>
+                </div>
+            </section>
+
+            <section class="info-section">
+                <h2>ℹ️ Információk</h2>
+                <div class="info-content">
+                    <h3>Koordináta Rendszerek</h3>
+                    <div class="info-item">
+                        <strong>ITRF20 (2026.0)</strong>
+                        <p>Az Nemzetközi Föld-referencia Keret (IERS Terrestrial Reference Frame) 2020-as verzió az 2026.0 epochára vonatkozóan. A GNSS (GPS, GLONASS, Galileo, BeiDou) rendszerek primár referenciakeret.</p>
+                    </div>
+                    <div class="info-item">
+                        <strong>ETRS89</strong>
+                        <p>Az Európai Föld Referencia Rendszer 1989 - az Euráziai kontinentális lemezhez rögzített. Európa hivatalos geodéziai alapkerete, mely az 1989.0 epochára van realizálva.</p>
+                    </div>
+                    <h3>Ellipszoid Paraméterek</h3>
+                    <div class="info-table">
+                        <table>
+                            <tr>
+                                <th>Paraméter</th>
+                                <th>WGS84 (ITRF20)</th>
+                                <th>ETRS89</th>
+                            </tr>
+                            <tr>
+                                <td>Félig nagytengy (a)</td>
+                                <td>6 378 137.0 m</td>
+                                <td>6 378 137.0 m</td>
+                            </tr>
+                            <tr>
+                                <td>Széligméret (b)</td>
+                                <td>6 356 752.314245 m</td>
+                                <td>6 356 752.314245 m</td>
+                            </tr>
+                            <tr>
+                                <td>Laposság (f)</td>
+                                <td>1/298.257223563</td>
+                                <td>1/298.257222101</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <h3>Transzformáció Paraméterei (Bursa-Wolf)</h3>
+                    <div class="info-table">
+                        <table>
+                            <tr>
+                                <th>Paraméter</th>
+                                <th>Érték (Epoch 2026.0)</th>
+                                <th>Egység</th>
+                            </tr>
+                            <tr>
+                                <td>ΔX</td>
+                                <td id="txValue">-</td>
+                                <td>m</td>
+                            </tr>
+                            <tr>
+                                <td>ΔY</td>
+                                <td id="tyValue">-</td>
+                                <td>m</td>
+                            </tr>
+                            <tr>
+                                <td>ΔZ</td>
+                                <td id="tzValue">-</td>
+                                <td>m</td>
+                            </tr>
+                            <tr>
+                                <td>Rx</td>
+                                <td id="rxValue">-</td>
+                                <td>mas</td>
+                            </tr>
+                            <tr>
+                                <td>Ry</td>
+                                <td id="ryValue">-</td>
+                                <td>mas</td>
+                            </tr>
+                            <tr>
+                                <td>Rz</td>
+                                <td id="rzValue">-</td>
+                                <td>mas</td>
+                            </tr>
+                            <tr>
+                                <td>Scale</td>
+                                <td id="scaleValue">-</td>
+                                <td>ppm</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 ITRF20 → ETRS89 Precíziós Koordináta Konverter</p>
+            <p>EUREF/IERS szabványok alapján | GNSS Adatfeldolgozás</p>
+        </footer>
+    </div>
+
+    <script src="geodesy.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
