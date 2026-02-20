@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>EOV → ETRF2000</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #080c16; --panel: #0f1623; --border: #1a2840;
+    --accent: #38bdf8; --green: #4ade80; --yellow: #facc15;
+    --red: #f87171; --text: #e2eaf8; --muted: #4f6280;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Syne', sans-serif; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 2rem;
+  }
+  .container { width: 100%; max-width: 540px; }
+  h1 {
+    font-size: 1.6rem; font-weight: 800;
+    background: linear-gradient(100deg, var(--accent), #fb923c);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 0.2rem;
+  }
+  .subtitle { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--muted); margin-bottom: 1.75rem; }
+
+  .status-bar {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.8rem 1.1rem; margin-bottom: 1.25rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.76rem;
+    display: flex; align-items: center; gap: 0.75rem; transition: all 0.3s;
+  }
+  .status-bar.loading { border-color: rgba(56,189,248,0.35); color: var(--accent); }
+  .status-bar.ready   { border-color: rgba(74,222,128,0.35); color: var(--green); }
+  .status-bar.error   { border-color: rgba(248,113,113,0.35); color: var(--red); }
+  .progress { flex:1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.2s; }
+
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .field label {
+    display: block; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 0.3rem;
+  }
+  input[type=number] {
+    width: 100%; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 7px; color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem; padding: 0.6rem 0.85rem; outline: none; transition: border-color 0.2s;
+  }
+  input[type=number]:focus { border-color: var(--accent); }
+
+  button {
+    width: 100%; border: none; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #0ea5e9); color: #060c18;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.95rem;
+    padding: 0.8rem; cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .result {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.1rem; margin-top: 1rem;
+    display: none; animation: fadeIn 0.3s ease;
+  }
+  .result.show { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+  .result-coords { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .kv { background: var(--bg); border-radius: 6px; padding: 0.5rem 0.75rem; }
+  .kv .k { font-size: 0.6rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
+  .kv .v { font-family: 'JetBrains Mono', monospace; font-size: 0.92rem; margin-top: 0.1rem; }
+
+  .dist-badge {
+    display: inline-flex; align-items: center;
+    padding: 0.35rem 0.8rem; border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+    margin-bottom: 0.6rem;
+  }
+  .dist-badge.green  { background: rgba(74,222,128,0.12); color: var(--green); }
+  .dist-badge.yellow { background: rgba(250,204,21,0.12);  color: var(--yellow); }
+  .dist-badge.red    { background: rgba(248,113,113,0.12); color: var(--red); }
+
+  .delta-row { display: flex; gap: 0.5rem; }
+  .delta { flex:1; background: var(--bg); border-radius:5px; padding: 0.4rem 0.6rem; }
+  .delta .k { font-size: 0.58rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .delta .v { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; margin-top: 0.05rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>EOV → ETRF2000</h1>
+  <p class="subtitle">// +nadgrids=hu_bme_hd72corr.tif · proj4js natív GeoTIFF támogatás</p>
+
+  <div class="status-bar loading" id="statusBar">
+    <span id="statusText">⏳ Grid betöltése: hu_bme_hd72corr.tif…</span>
+    <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <div class="fields">
+    <div class="field"><label>EOV Y – Easting [m]</label>
+      <input id="eovY" type="number" value="738878.000" step="0.001"></div>
+    <div class="field"><label>EOV X – Northing [m]</label>
+      <input id="eovX" type="number" value="145995.000" step="0.001"></div>
+  </div>
+  <div class="fields">
+    <div class="field"><label>Elvárt Lat</label>
+      <input id="expLat" type="number" value="46.652377675" step="0.000000001"></div>
+    <div class="field"><label>Elvárt Lon</label>
+      <input id="expLon" type="number" value="20.208615734" step="0.000000001"></div>
+  </div>
+
+  <button id="btnRun" onclick="convert()" disabled>▶ Konverzió</button>
+
+  <div class="result" id="result">
+    <div class="result-coords">
+      <div class="kv"><div class="k">Latitude (ETRF2000)</div><div class="v" id="resLat">—</div></div>
+      <div class="kv"><div class="k">Longitude (ETRF2000)</div><div class="v" id="resLon">—</div></div>
+    </div>
+    <div class="dist-badge" id="resDist">—</div>
+    <div class="delta-row">
+      <div class="delta"><div class="k">ΔLat (m)</div><div class="v" id="dLat">—</div></div>
+      <div class="delta"><div class="k">ΔLon (m)</div><div class="v" id="dLon">—</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GRID_NAME = 'hu_bme_hd72corr.tif';
+
+proj4.defs('ETRF2000', '+proj=longlat +ellps=GRS80 +no_defs');
+proj4.defs('EOV',
+  '+proj=somerc +lat_0=47.14439372222222 +lon_0=19.04857177777778' +
+  ' +k_0=0.99993 +x_0=650000 +y_0=200000 +ellps=GRS67' +
+  ` +nadgrids=${GRID_NAME} +units=m +no_defs`
+);
+
+function setStatus(cls, msg) {
+  const bar = document.getElementById('statusBar');
+  bar.className = `status-bar ${cls}`;
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('progressFill').style.width = '100%';
+}
+
+async function loadGrid() {
+  try {
+    const resp = await fetch( GRID_NAME);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} — tedd a .tif fájlt a HTML mellé!`);
+
+    const total = parseInt(resp.headers.get('content-length') || '0');
+    const reader = resp.body.getReader();
+    const chunks = []; let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); received += value.length;
+      if (total) document.getElementById('progressFill').style.width = (received / total * 100) + '%';
+    }
+
+    const buf = new Uint8Array(received);
+    let off = 0;
+    for (const c of chunks) { buf.set(c, off); off += c.length; }
+
+    // proj4js natív GeoTIFF nadgrid támogatás (proj4js.org dokumentáció alapján)
+    const tiff = await GeoTIFF.fromArrayBuffer(buf.buffer);
+    await proj4.nadgrid(GRID_NAME, tiff).ready;
+
+    setStatus('ready', `✅ Grid kész (${(received/1024).toFixed(0)} KB)`);
+    document.getElementById('btnRun').disabled = false;
+  } catch(e) {
+    setStatus('error', `❌ ${e.message}`);
+  }
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dφ = (lat2-lat1)*Math.PI/180, dλ = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dφ/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dλ/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+function convert() {
+  try {
+    const eovY   = parseFloat(document.getElementById('eovY').value);
+    const eovX   = parseFloat(document.getElementById('eovX').value);
+    const expLat = parseFloat(document.getElementById('expLat').value);
+    const expLon = parseFloat(document.getElementById('expLon').value);
+
+    const [lon, lat] = proj4('EOV', 'ETRF2000').forward([eovY, eovX]);
+
+    const dist = haversine(expLat, expLon, lat, lon);
+    const dLa  = (lat - expLat) * 111320;
+    const dLo  = (lon - expLon) * 111320 * Math.cos(expLat * Math.PI / 180);
+
+    document.getElementById('resLat').textContent = lat.toFixed(9);
+    document.getElementById('resLon').textContent = lon.toFixed(9);
+
+    const badge = document.getElementById('resDist');
+    badge.textContent = `◎ ${dist.toFixed(4)} m eltérés`;
+    badge.className = `dist-badge ${dist < 0.5 ? 'green' : dist < 3 ? 'yellow' : 'red'}`;
+
+    document.getElementById('dLat').textContent = dLa.toFixed(4) + ' m';
+    document.getElementById('dLon').textContent = dLo.toFixed(4) + ' m';
+
+    document.getElementById('result').classList.add('show');
+  } catch(e) {
+    setStatus('error', `❌ Konverziós hiba: ${e.message}`);
+  }
+}
+
+loadGrid();
+</script>
+</body>
+</html>

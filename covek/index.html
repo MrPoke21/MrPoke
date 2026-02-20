@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cövek – EOV koordináta transzformtor</title>
+    
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Providers plugin -->
+    <script src="https://unpkg.com/leaflet-providers@2.0.0/leaflet-providers.js"></script>
+    
+    <!-- Proj4.js - unpkg CDN-ből -->
+    <script src="https://unpkg.com/proj4@2.9.1/dist/proj4.js"></script>
+    
+    <!-- JSZip és shpjs (shapefile) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/shpjs@3.4.3/dist/shp.js"></script>
+    
+    <!-- Local styles -->
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="container">
+        <div id="map">
+            <!-- Koordináta panel a térképen -->
+            <div class="coord-panel">
+                <div class="coord-row">
+                    <div class="coord-label">WGS84</div>
+                    <div class="coord-value">
+                        <span id="lat">—</span>, <span id="lon">—</span>
+                    </div>
+                </div>
+                <div class="coord-row">
+                    <div class="coord-label">ETRF2000</div>
+                    <div class="coord-value">
+                        <span id="latETRF">—</span>, <span id="lonETRF">—</span>
+                    </div>
+                </div>
+                <div class="coord-row">
+                    <div class="coord-label">EOV</div>
+                    <div class="coord-value">
+                        Y: <span id="eovY">—</span> X: <span id="eovX">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mérési távolság panel az alján -->
+        <div id="distance-info-panel" class="distance-info-panel" style="display: none;">
+            <div id="distance-text">—</div>
+        </div>
+        
+        <button class="hamburger" id="hamburgerBtn" aria-label="Menü">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        
+        <div class="sidebar" id="sidebar">
+            <button class="sidebar-close" id="sidebarClose" aria-label="Bezárás">✕</button>
+            <h2>🗺️ cövek</h2>
+            <p style="margin: -15px 0 20px 0; font-size: 12px; color: #999; font-style: italic;">– áll mint a cövek</p>
+            
+            <!-- Shapefile upload -->
+            <div class="section">
+                <h3>📁 Shapefile import</h3>
+                <label for="shapeFile">ZIP fájl (shapefile)</label>
+                <input type="file" id="shapeFile" accept=".zip" />
+                
+                <label for="shapeFileProjection" style="display: flex; align-items: center; gap: 8px;">
+                    Vetület
+                    <button id="projectionHelpBtn" type="button" class="help-icon-btn" title="Vetület információ" aria-label="Vetület információ">
+                        ?
+                    </button>
+                </label>
+                <select id="shapeFileProjection">
+                    <option value="wgs84">WGS84</option>
+                    <option value="etrf2000">ETRF2000</option>
+                    <option value="eov" selected>EOV</option>
+                </select>
+                
+                <div id="shapeFileStatus"></div>
+            </div>
+
+            <!-- Forrás kiválasztása -->
+            <div class="section">
+                <h3>📡 Forrás</h3>
+                <label for="gpsSource" style="display: flex; align-items: center; gap: 8px;">
+                    Kiválasztott forrás
+                    <button id="sourceHelpBtn" type="button" class="help-icon-btn" title="Forrás információ" aria-label="Forrás információ">
+                        ?
+                    </button>
+                </label>
+                <select id="gpsSource">
+                    <option value="wgs84">WGS84 GPS</option>
+                    <option value="rtk">ETRF2000 RTK</option>
+                    <option value="screenCenter">Térkép középpontja</option>
+                </select>
+            </div>
+
+            <!-- Auto zoom -->
+            <div class="section">
+                <h3>🔍 Megjelenítés</h3>
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="autoZoomEnable" style="margin-right: 8px;">
+                    <span>Auto zoom műholdnézethez</span>
+                </label>
+            </div>
+
+            <!-- About -->
+            <div class="section about-section">
+                <h3>ℹ️ Névjegy</h3>
+                <p>
+                    <strong>Cövek</strong><br>
+                    EOV koordináta transzformációs és shapefile feldolgozó alkalmazás
+                </p>
+                <p>
+                    <strong>Készítette:</strong> Mr. Poke<br>
+                    📧 <a href="mailto:mrpoke21@gmail.com">mrpoke21@gmail.com</a>
+                </p>
+                <p style="font-size: 12px; color: #999; margin-top: 12px;">
+                    <strong>Támogatta:</strong> GitHub Copilot AI Assistant<br>
+                    Az alkalmazás fejlesztésében mesterséges intelligencia segédlettel készült kódoptimalizálás, refaktorálás és felhasználói interfész fejlesztés terén.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vetület információs modal -->
+    <div id="projectionModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ℹ️ Vetület információ</h2>
+                <button class="modal-close" id="projectionModalClose" type="button" aria-label="Bezárás">✕</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Mit kell ezzel csinálni?</strong></p>
+                <p>A feltölteni kívánt <strong>shapefile-ban tárolt koordináták vetületét kell megadni</strong>. Ez a fájl metaadataiban vagy dokumentációjában szerepel.</p>
+                
+                <p><strong>🗺️ Vetület típusok:</strong></p>
+                <ul>
+                    <li><strong>EOV</strong> – Magyarország Egységes Vetületi Rendszere (1975). Ez a <strong>leggyakoribb</strong> választás magyar shapefile-ok esetén.</li>
+                    <li><strong>ETRF2000</strong> – Európai referencia rendszer. Közvetlenül használható EOV szülőrendszerként.</li>
+                    <li><strong>WGS84</strong> – GPS standart. <strong>Nagyon ritkán</strong> fordul elő magyar adatok esetén.</li>
+                </ul>
+                
+                <p><strong>⚠️ Hibás vetület választása esetén:</strong></p>
+                <p>Sikertelen koordináta-transzformáció vagy lehetséges Java hiba gátolhatja a feltöltést. Ha ez megtörténik:</p>
+                <ol>
+                    <li>A ZIP-fájlból <strong>töröld ki a .prj fájlt</strong> (az EOV vetületi definícióját tartalmazza, mely ütközhet egy másik vetülettel)</li>
+                    <li>Próbáld meg újra feltölteni a módosított ZIP fájlt</li>
+                </ol>
+                
+                <p><strong>💡 Tipp:</strong> Ha nem vagy biztos, a .prj fájlt szövegeditorban megnyitva megtekintheted az aktuális vetületi definíciót.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="projectionModalOK" type="button">Rendben</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forrás információs modal -->
+    <div id="sourceModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ℹ️ Forrás információ</h2>
+                <button class="modal-close" id="sourceModalClose" type="button" aria-label="Bezárás">✕</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Mit kell ezzel csinálni?</strong></p>
+                <p>Válaszd ki a koordináta adatok <strong>forrásrendszerét</strong> – ahonnan az aktuális pozíciódat szeretnéd meghatározni.</p>
+                
+                <p><strong>📡 Forrás típusok:</strong></p>
+                <ul>
+                    <li><strong>ETRF2000 RTK</strong> – Valós idejű kinematikus GNSS, fix megoldás. <strong>RTK fix esetén ezt kell választani.</strong> Centiméteres pontosság Magyarország felett.</li>
+                    <li><strong>WGS84 GPS</strong> – Standard vagy hálózati korrekciós DGNSS, PPP stb. <strong>Ha más korrekciós módszert használsz (D*GNSS, PPP, stb.), ezt válaszd.</strong> Deciméteres pontosság.</li>
+                    <li><strong>Térkép középpontja</strong> – A térképen megjelenített terület középpontja. <strong>Tesztelésre és tanulásra</strong> használható, ha nincs valós GPS adatod.</li>
+                </ul>
+                
+                <p><strong>💡 Tipp:</strong> Ha RTK vevővel dolgozol, az ETRF2000 RTK az ajánlott. Egyéb esetekben a WGS84 GPS lehetőség felel meg a legtöbb felhasználási esetnek.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="sourceModalOK" type="button">Rendben</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="logger.js"></script>
+    <script src="validation.js"></script>
+    <script src="eov-transformer.js"></script>
+    <script src="ui-controls.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
