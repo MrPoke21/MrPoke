@@ -227,21 +227,8 @@ function initSourceModal() {
 
 // ============ KOORDINÁTA MÁSOLÁS VÁGÓLAPRA ============
 function initCoordinateCopyHandlers() {
-    // WGS84 koordináta pár
-    const coordRowWGS84 = document.querySelector('.coord-row:nth-child(1)');
-    if (coordRowWGS84) {
-        coordRowWGS84.style.cursor = 'pointer';
-        coordRowWGS84.addEventListener('click', () => {
-            const lat = document.getElementById('lat').textContent;
-            const lon = document.getElementById('lon').textContent;
-            if (lat !== '—' && lon !== '—') {
-                copyToClipboard(`${lat}, ${lon}`, 'WGS84');
-            }
-        });
-    }
-    
     // ETRF2000 koordináta pár
-    const coordRowETRF = document.querySelector('.coord-row:nth-child(2)');
+    const coordRowETRF = document.querySelector('.coord-row:nth-child(1)');
     if (coordRowETRF) {
         coordRowETRF.style.cursor = 'pointer';
         coordRowETRF.addEventListener('click', () => {
@@ -254,7 +241,7 @@ function initCoordinateCopyHandlers() {
     }
     
     // EOV koordináta pár
-    const coordRowEOV = document.querySelector('.coord-row:nth-child(3)');
+    const coordRowEOV = document.querySelector('.coord-row:nth-child(2)');
     if (coordRowEOV) {
         coordRowEOV.style.cursor = 'pointer';
         coordRowEOV.addEventListener('click', () => {

@@ -95,6 +95,7 @@ body {
 #error-title {
     font-weight: bold;
     font-size: 14px;
+    margin-bottom: 5px;
 }
 
 #error-message {
@@ -197,6 +198,11 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+#polygon-area {
+    color: #ff6b35;
+    font-weight: bold;
 }
 
 .polygon-properties {

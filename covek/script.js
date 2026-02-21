@@ -57,7 +57,11 @@ const AppState = {
     // Map és transzformáció
     map: null,
     transformer: null,
+    eovCRS: null,
+    layerControl: null,
     shapeFileLayer: null,
+    baseMaps: {},
+    overlayMaps: {},
     
     // GPS
     gpsMarker: null,
@@ -66,15 +70,15 @@ const AppState = {
     // Térkép elemek
     screenCenterMarker: null,
     
-    // Kiválasztás
+    // Kiválasztás - ETRF2000 koordináták
     selectedLayer: null,
     selectedCornerMarker: null,
     selectedPolygon: null,
     allCornerMarkers: [],
     selectedPointEOV: { x: null, y: null },
-    selectedPointWGS84: { lat: null, lon: null },
+    selectedPointETRF2000: { lat: null, lon: null },
     selectedLineEOV: { start: null, end: null },
-    selectedLineWGS84: { start: null, end: null },
+    selectedLineETRF2000: { start: null, end: null },
     selectedPolygonEOV: [],
     selectedPolygonProperties: null,
     
@@ -83,9 +87,7 @@ const AppState = {
     distanceLabel: null,
     perpendicularMarker: null,
     
-    // Koordináták
-    currentLatWGS84: null,
-    currentLonWGS84: null,
+    // Koordináták - ETRF2000
     currentLatETRF2000: null,
     currentLonETRF2000: null,
     currentEOVY: null,
@@ -117,25 +119,23 @@ const AppState = {
         return this.gpsWatchId;
     },
     
-    setSelectedPoint(eovPoint, wgs84Point) {
+    setSelectedPoint(eovPoint, etrf2000Point) {
         this.selectedPointEOV = eovPoint || { x: null, y: null };
-        this.selectedPointWGS84 = wgs84Point || { lat: null, lon: null };
+        this.selectedPointETRF2000 = etrf2000Point || { lat: null, lon: null };
     },
     getSelectedPoint() {
-        return { eov: this.selectedPointEOV, wgs84: this.selectedPointWGS84 };
+        return { eov: this.selectedPointEOV, etrf2000: this.selectedPointETRF2000 };
     },
     
-    setSelectedLine(eovLine, wgs84Line) {
+    setSelectedLine(eovLine, etrf2000Line) {
         this.selectedLineEOV = eovLine || { start: null, end: null };
-        this.selectedLineWGS84 = wgs84Line || { start: null, end: null };
+        this.selectedLineETRF2000 = etrf2000Line || { start: null, end: null };
     },
     getSelectedLine() {
-        return { eov: this.selectedLineEOV, wgs84: this.selectedLineWGS84 };
+        return { eov: this.selectedLineEOV, etrf2000: this.selectedLineETRF2000 };
     },
     
-    setCurrentCoordinates(latWGS84, lonWGS84, latETRF2000, lonETRF2000, eovY, eovX) {
-        this.currentLatWGS84 = latWGS84;
-        this.currentLonWGS84 = lonWGS84;
+    setCurrentCoordinates(latETRF2000, lonETRF2000, eovY, eovX) {
         this.currentLatETRF2000 = latETRF2000;
         this.currentLonETRF2000 = lonETRF2000;
         this.currentEOVY = eovY;
@@ -143,7 +143,6 @@ const AppState = {
     },
     getCurrentCoordinates() {
         return {
-            wgs84: { lat: this.currentLatWGS84, lon: this.currentLonWGS84 },
             etrf2000: { lat: this.currentLatETRF2000, lon: this.currentLonETRF2000 },
             eov: { y: this.currentEOVY, x: this.currentEOVX }
         };
@@ -154,9 +153,9 @@ const AppState = {
         this.selectedCornerMarker = null;
         this.selectedPolygon = null;
         this.selectedPointEOV = { x: null, y: null };
-        this.selectedPointWGS84 = { lat: null, lon: null };
+        this.selectedPointETRF2000 = { lat: null, lon: null };
         this.selectedLineEOV = { start: null, end: null };
-        this.selectedLineWGS84 = { start: null, end: null };
+        this.selectedLineETRF2000 = { start: null, end: null };
         this.selectedPolygonEOV = [];
         this.selectedPolygonProperties = null;
     },
@@ -277,10 +276,8 @@ function removeMapLayers(...layers) {
     layers.forEach(layer => removeMapLayer(layer));
 }
 
-// Megjelenítés - csak a meglévő értékeket jeleníti meg
+// Megjelenítés - csak a meglévő értékeket jeleníti meg (ETRF2000)
 function updateCoordinateDisplay() {
-    document.getElementById('lat').textContent = AppState.currentLatWGS84 ? AppState.currentLatWGS84.toFixed(9) : '—';
-    document.getElementById('lon').textContent = AppState.currentLonWGS84 ? AppState.currentLonWGS84.toFixed(9) : '—';
     document.getElementById('latETRF').textContent = AppState.currentLatETRF2000 ? AppState.currentLatETRF2000.toFixed(9) : '—';
     document.getElementById('lonETRF').textContent = AppState.currentLonETRF2000 ? AppState.currentLonETRF2000.toFixed(9) : '—';
     document.getElementById('eovY').textContent = AppState.currentEOVY ? AppState.currentEOVY.toFixed(2) : '—';
@@ -310,14 +307,17 @@ function initMap() {
     // Alapértelmezett térképréteg
     const osmLayer = L.tileLayer.provider('OpenStreetMap.Mapnik', zoomOptions).addTo(AppState.map);
     
-    // Alternatív térképrétegek
-    const baseMaps = {
+    // Alternatív térképrétegek - AppState-ben tárolva az addMePARLayers() számára
+    AppState.baseMaps = {
         'OpenStreetMap': L.tileLayer.provider('OpenStreetMap.Mapnik', zoomOptions),
         'Esri Műholdkép': L.tileLayer.provider('Esri.WorldImagery', esriImageryOptions)
     };
     
-    // Térképkontrol hozzáadása
-    L.control.layers(baseMaps, null, { position: 'topright' }).addTo(AppState.map);
+    // Overlay (be-/kikapcsolható) rétegek - AppState-ben tárolva, az addMePARLayers() később hozzáadja a rétegeket
+    AppState.overlayMaps = {};
+    
+    // Térképkontrol hozzáadása és mentése az AppState-ben
+    AppState.layerControl = L.control.layers(AppState.baseMaps, AppState.overlayMaps, { position: 'topright' }).addTo(AppState.map);
     
     // Explicit pane-ok a layerek sorrendjéhez
     AppState.map.createPane('polygonPane');
@@ -421,6 +421,7 @@ function updateDistanceLine() {
     let distance = null;
     let targetWGS84 = null;
     let projectionWGS84 = null;
+    let distanceResult = null;  // Tárolni fogja a calculatePointToLineDistance() eredményét
     const distanceInfoPanel = DOMCache.get('distance-info-panel');
     const distanceTextElement = DOMCache.get('distance-text');
     
@@ -434,37 +435,39 @@ function updateDistanceLine() {
     }
     
     // Sarokpont kiválasztva
-    if (AppState.selectedPointEOV.x && AppState.selectedPointEOV.y && AppState.selectedPointWGS84.lat && AppState.selectedPointWGS84.lon) {
+    if (AppState.selectedPointEOV.x && AppState.selectedPointEOV.y && AppState.selectedPointETRF2000.lat && AppState.selectedPointETRF2000.lon) {
         distance = Math.sqrt(
             Math.pow(AppState.selectedPointEOV.x - AppState.currentEOVX, 2) + 
             Math.pow(AppState.selectedPointEOV.y - AppState.currentEOVY, 2)
         );
-        targetWGS84 = AppState.selectedPointWGS84;
+        targetWGS84 = AppState.selectedPointETRF2000;
     }
     // Vonal kiválasztva
-    else if (AppState.selectedLineEOV.start && AppState.selectedLineEOV.end && AppState.selectedLineWGS84.start && AppState.selectedLineWGS84.end) {
-        const result = calculatePointToLineDistance(
+    else if (AppState.selectedLineEOV.start && AppState.selectedLineEOV.end && AppState.selectedLineETRF2000.start && AppState.selectedLineETRF2000.end) {
+        // Computálás EOV-ben (hogy a távolság méterben legyen)
+        distanceResult = calculatePointToLineDistance(
             { x: AppState.currentEOVX, y: AppState.currentEOVY },
             AppState.selectedLineEOV.start,
             AppState.selectedLineEOV.end
         );
         
-        distance = result.distance;
+        distance = distanceResult.distance;
         
-        // Vetület pont WGS84-re konvertálása
-        const etrf = AppState.transformer.eov2etrf2000(result.projection.y, result.projection.x);
-        projectionWGS84 = AppState.transformer.etrf2000_2wgs84(etrf.lat, etrf.lon);
+        // Vetület pont konvertálása EOV-ből ETRF2000-be
+        const etrf = AppState.transformer.eov2etrf2000(distanceResult.projection.y, distanceResult.projection.x);
+        projectionWGS84 = { lat: etrf.lat, lon: etrf.lon };
         targetWGS84 = projectionWGS84;
         
-        // Ha a merőleges vetület kívül esik a vonal végpontjain, tárolom az eredeti vetületet
-        if (result.t < 0 || result.t > 1) {
-            const etrf_original = AppState.transformer.eov2etrf2000(result.originalProjection.y, result.originalProjection.x);
-            const perpWGS84 = AppState.transformer.etrf2000_2wgs84(etrf_original.lat, etrf_original.lon);
-            window.perpendicularPerpWGS84 = perpWGS84;
-            window.perpendicularPerpDistance = result.perpDistance;
+        // Ha a merőleges vetület kívül esik a vonal végpontjain
+        if (distanceResult.t < 0 || distanceResult.t > 1) {
+            const etrf_original = AppState.transformer.eov2etrf2000(distanceResult.originalProjection.y, distanceResult.originalProjection.x);
+            window.perpendicularPerpWGS84 = { lat: etrf_original.lat, lon: etrf_original.lon };
+            window.perpendicularPerpDistance = distanceResult.perpDistance;
+            window.distanceResultT = distanceResult.t;
         } else {
             window.perpendicularPerpWGS84 = null;
             window.perpendicularPerpDistance = null;
+            window.distanceResultT = null;
         }
     } else {
         // Nincs kiválasztott elem
@@ -526,22 +529,8 @@ function updateDistanceLine() {
     }
     
     // Ha az egyenes meghosszabbítva van (merőleges kívül van a vonal végpontjain)
-    // Ezt csak vonal kiválasztása esetén kell megjelenítem
-    if (AppState.selectedLineEOV.start && AppState.selectedLineEOV.end && window.perpendicularPerpWGS84) {
-        // Piros szaggatott vonal az eredeti merőleges vetületig
-        const extendedLine = L.polyline(
-            [[AppState.currentLatWGS84, AppState.currentLonWGS84], [window.perpendicularPerpWGS84.lat, window.perpendicularPerpWGS84.lon]],
-            {
-                color: CONSTANTS.COLORS.PRIMARY_RED,
-                weight: CONSTANTS.GEOMETRY.LINE_WEIGHT,
-                opacity: 0.6,
-                dashArray: '5, 5',
-                pane: 'linePane'
-            }
-        ).addTo(AppState.map);
-        AppState.distanceLine.extendedLine = extendedLine;
-        
-        // Zöld szaggatott vonal az eredeti egyenes meghosszabbítva
+    if (AppState.selectedLineEOV.start && AppState.selectedLineEOV.end && window.perpendicularPerpWGS84 && distanceResult) {
+        // EOV-ben meghosszabbított vonal végpontjai
         const dx = AppState.selectedLineEOV.end.x - AppState.selectedLineEOV.start.x;
         const dy = AppState.selectedLineEOV.end.y - AppState.selectedLineEOV.start.y;
         
@@ -556,15 +545,26 @@ function updateDistanceLine() {
             y: AppState.selectedLineEOV.end.y + dy * extendFactor
         };
         
-        // Konvertálás WGS84-re
+        // Konvertálás ETRF2000-be megjelenítéshez
         const etrf_start = AppState.transformer.eov2etrf2000(extendedStart.y, extendedStart.x);
-        const wgs84_start = AppState.transformer.etrf2000_2wgs84(etrf_start.lat, etrf_start.lon);
-        
         const etrf_end = AppState.transformer.eov2etrf2000(extendedEnd.y, extendedEnd.x);
-        const wgs84_end = AppState.transformer.etrf2000_2wgs84(etrf_end.lat, etrf_end.lon);
         
+        // Piros szaggatott vonal az aktuális pozícióból a merőleges vetület pontra
+        const extendedLine = L.polyline(
+            [[AppState.currentLatWGS84, AppState.currentLonWGS84], [window.perpendicularPerpWGS84.lat, window.perpendicularPerpWGS84.lon]],
+            {
+                color: CONSTANTS.COLORS.PRIMARY_RED,
+                weight: CONSTANTS.GEOMETRY.LINE_WEIGHT,
+                opacity: 0.6,
+                dashArray: '5, 5',
+                pane: 'linePane'
+            }
+        ).addTo(AppState.map);
+        AppState.distanceLine.extendedLine = extendedLine;
+        
+        // Zöld szaggatott vonal az eredeti egyenes meghosszabbítva
         const lineExtension = L.polyline(
-            [[wgs84_start.lat, wgs84_start.lon], [wgs84_end.lat, wgs84_end.lon]],
+            [[etrf_start.lat, etrf_start.lon], [etrf_end.lat, etrf_end.lon]],
             {
                 color: CONSTANTS.COLORS.GREEN,
                 weight: CONSTANTS.GEOMETRY.LINE_WEIGHT,
@@ -613,13 +613,13 @@ function performAutoZoom() {
     ]);
     
     // Kijelölt pont hozzáadása
-    if (AppState.selectedPointWGS84.lat && AppState.selectedPointWGS84.lon) {
-        bounds.extend([AppState.selectedPointWGS84.lat, AppState.selectedPointWGS84.lon]);
+    if (AppState.selectedPointETRF2000.lat && AppState.selectedPointETRF2000.lon) {
+        bounds.extend([AppState.selectedPointETRF2000.lat, AppState.selectedPointETRF2000.lon]);
     }
     // Kijelölt vonal hozzáadása
-    else if (AppState.selectedLineWGS84.start && AppState.selectedLineWGS84.end) {
-        bounds.extend([AppState.selectedLineWGS84.start.lat, AppState.selectedLineWGS84.start.lon]);
-        bounds.extend([AppState.selectedLineWGS84.end.lat, AppState.selectedLineWGS84.end.lon]);
+    else if (AppState.selectedLineETRF2000.start && AppState.selectedLineETRF2000.end) {
+        bounds.extend([AppState.selectedLineETRF2000.start.lat, AppState.selectedLineETRF2000.start.lon]);
+        bounds.extend([AppState.selectedLineETRF2000.end.lat, AppState.selectedLineETRF2000.end.lon]);
     } else {
         return;
     }
@@ -697,41 +697,6 @@ function displayPolygonInfo(eovCorners, properties) {
     polygonInfoPanel.style.display = 'block';
 }
 
-function initTransformer() {
-    try {
-        AppState.transformer = new EOVTransformer();
-        Logger_Transform.success('EOVTransformer inicializálva');
-        
-        // Grid status kijelzésének frissítése
-        updateGridStatusDisplay();
-        
-        // Test conversion ETRF2000 → EOV
-        setTimeout(() => {
-            AppState.transformer.testConversion();
-        }, 100);
-        
-        // Grid betöltésének megkísérlése
-        if (AppState.transformer && typeof AppState.transformer.loadGridFromWeb === 'function') {
-            AppState.transformer.loadGridFromWeb('etrs2eov_notowgs.gsb')
-                .then(success => {
-                    Logger_Transform.info('Grid betöltés eredménye:', success);
-                    updateGridStatusDisplay();
-                    
-                    // Test conversion újra a grid után
-                    AppState.transformer.testConversion();
-                })
-                .catch(err => {
-                    Logger_Transform.warn('Grid betöltés sikertelen, Helmert fallback használva');
-                    updateGridStatusDisplay();
-                });
-        }
-    } catch (err) {
-        Logger_Transform.error('EOVTransformer init sikertelen', err);
-        showStatus('Koordináta transzformátor hiba: ' + ErrorRecovery.getUserMessage(err), 'error');
-    }
-}
-
-// Grid status kijelzése frissítése
 function updateGridStatusDisplay() {
     if (!AppState.transformer || typeof AppState.transformer.getGridStatus !== 'function') {
         return;
@@ -1283,9 +1248,6 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                         if (AppState.selectedLayer === layer) {
                             deselectAll();
                         } else {
-                            // Előző kiválasztott resetelése
-                            deselectAll();
-                            
                             // Vonal kiválasztása
                             AppState.selectedLayer = layer;
                             layer.setStyle({
@@ -1294,9 +1256,9 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                                 opacity: 1.0
                             });
                             
-                            // EOV és WGS84 koordináták már a properties-ben vannak
+                            // EOV és ETRF2000 koordináták már a properties-ben vannak
                             const lineCoords = feature.geometry.coordinates;
-                            AppState.selectedLineWGS84 = {
+                            AppState.selectedLineETRF2000 = {
                                 start: { lat: lineCoords[0][1], lon: lineCoords[0][0] },
                                 end: { lat: lineCoords[1][1], lon: lineCoords[1][0] }
                             };
@@ -1333,7 +1295,6 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                                     fillOpacity: 0.5
                                 });
                             }
-                            deselectAll();
                             
                             // Poligon kiválasztása - zöld stílus
                             AppState.selectedPolygon = layer;
@@ -1394,7 +1355,7 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                                 deselectAll();
                             } else {
                                 // Előző kiválasztott resetelése
-                                deselectAll();
+                                // (A deselectAll() már csinálta)
                                 
                                 // Sarokpont kiválasztása
                                 AppState.selectedCornerMarker = cornerMarker;
@@ -1402,8 +1363,8 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                                 const markerSize = getCornerMarkerSize(currentZoom);
                                 cornerMarker.setIcon(getCornerMarkerIcon('red', markerSize));
                                 
-                                // WGS84 és EOV koordináták már a properties-ben vannak (a corner index alapján)
-                                AppState.selectedPointWGS84 = { lat: coord[1], lon: coord[0] };
+                                // ETRF2000 és EOV koordináták már a properties-ben vannak (a corner index alapján)
+                                AppState.selectedPointETRF2000 = { lat: coord[1], lon: coord[0] };
                                 
                                 if (feature.properties && feature.properties.eov_corners) {
                                     AppState.selectedPointEOV = feature.properties.eov_corners[index];
@@ -1413,7 +1374,7 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                                 
                                 // Távolságvonal rajzolása
                                 updateDistanceLine();
-                                Logger_Map.debug('Sarokpont kiválasztva', { coord, index, eov: AppState.selectedPointEOV, wgs84: AppState.selectedPointWGS84 });
+                                Logger_Map.debug('Sarokpont kiválasztva', { coord, index, eov: AppState.selectedPointEOV, etrf2000: AppState.selectedPointETRF2000 });
                             }
                         });
                         

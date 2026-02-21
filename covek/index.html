@@ -12,8 +12,11 @@
     <!-- Leaflet Providers plugin -->
     <script src="https://unpkg.com/leaflet-providers@2.0.0/leaflet-providers.js"></script>
     
-    <!-- Proj4.js - unpkg CDN-ből (2.11.0+ szükséges nadgrid támogatáshoz) -->
+    <!-- Proj4.js -->
     <script src="https://unpkg.com/proj4@2.12.0/dist/proj4.js"></script>
+    
+    <!-- Leaflet-Proj4 plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-proj4/1.0.2/leaflet-proj4.umd.js"></script>
     
     <!-- JSZip és shpjs (shapefile) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -31,9 +34,9 @@
         <div class="error-content">
             <span id="error-icon">⚠️</span>
             <div class="error-text">
-                <div id="error-title" style="font-weight: bold; margin-bottom: 5px;"></div>
-                <div id="error-message" style="font-size: 13px; color: #999;"></div>
-                <div id="error-value" style="font-family: monospace; margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; font-size: 12px;"></div>
+                <div id="error-title"></div>
+                <div id="error-message"></div>
+                <div id="error-value"></div>
             </div>
             <button id="error-close" class="error-close" aria-label="Bezárás">✕</button>
         </div>
@@ -43,12 +46,6 @@
         <div id="map">
             <!-- Koordináta panel a térképen -->
             <div class="coord-panel">
-                <div class="coord-row">
-                    <div class="coord-label">WGS84</div>
-                    <div class="coord-value">
-                        <span id="lat">—</span>, <span id="lon">—</span>
-                    </div>
-                </div>
                 <div class="coord-row">
                     <div class="coord-label">ETRF2000</div>
                     <div class="coord-value">
@@ -65,15 +62,15 @@
         </div>
         
         <!-- Mérési távolság panel az alján -->
-        <div id="distance-info-panel" class="distance-info-panel" style="display: none;">
+        <div id="distance-info-panel" class="distance-info-panel" hidden>
             <div id="distance-text">—</div>
         </div>
 
         <!-- Poligon információs panel az alján -->
-        <div id="polygon-info-panel" class="polygon-info-panel" style="display: none;">
+        <div id="polygon-info-panel" class="polygon-info-panel" hidden>
             <div class="polygon-info-header">
                 <strong>📍 Poligon</strong>
-                <span id="polygon-area" style="float: right; font-weight: bold; color: #ff6b35;">—</span>
+                <span id="polygon-area">—</span>
             </div>
             <div id="polygon-properties" class="polygon-properties">
                 <!-- Properties dinamikusan jelennek meg -->
@@ -278,6 +275,7 @@
     <script src="logger.js"></script>
     <script src="validation.js"></script>
     <script src="eov-transformer.js"></script>
+    <script src="mepar-layers.js"></script>
     <script src="mathematics.js"></script>
     <script src="ui-controls.js"></script>
     <script src="script.js"></script>

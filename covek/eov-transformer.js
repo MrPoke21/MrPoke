@@ -86,15 +86,12 @@ class EOVTransformer {
       await proj4.nadgrid(gridPath, arrayBuffer).ready;
       
       this.gridLoaded = true;
-      console.log(`✅ Grid file loaded and registered: ${gridPath}`);
       return true;
     } catch (err) {
       // File not accessible or grid registration failed
-      console.warn(`⚠️ Failed to load grid file (${gridPath}): ${err.message}`);
     }
     
     this.gridLoaded = false;
-    console.log(`ℹ️ Grid file not accessible (${gridPath}) - Helmert fallback active`);
     return false;
   }
 
@@ -102,6 +99,16 @@ class EOVTransformer {
    * Get grid status
    * @returns {Object} - Status info
    */
+  getGridStatus() {
+    return {
+      loaded: this.gridLoaded,
+      accuracy: this.gridLoaded ? '±10-50 mm (ETRS2EOV)' : '±200-500 cm (Helmert)',
+      source: this.gridLoaded ? 'ETRS2EOV nadgrid (etrs2eov_notowgs.gsb)' : 'Helmert 7-parameter transformation'
+    };
+  }
+
+
+
   getGridStatus() {
     return {
       loaded: this.gridLoaded,
@@ -277,17 +284,6 @@ class EOVTransformer {
       const diffX = Math.abs(result.x - expectedX);
       const distDiff = Math.sqrt(diffY * diffY + diffX * diffX);
       
-      console.log('=== ETRF2000 → EOV TESZT ===');
-      console.log(`Bemenet: ${lat}, ${lon}`);
-      console.log(`\nElvárt: Y=${expectedY}, X=${expectedX}`);
-      console.log(`Számított: Y=${result.y.toFixed(3)}, X=${result.x.toFixed(3)}`);
-      console.log(`\nKülönbség Y: ${diffY.toFixed(3)} m`);
-      console.log(`Különbség X: ${diffX.toFixed(3)} m`);
-      console.log(`Távolság különbség: ${distDiff.toFixed(3)} m`);
-      console.log(`Grid használat: ${result.gridUsed ? 'Igen' : 'Nem (Helmert fallback)'}`);
-      console.log(`Pontosság: ${result.accuracy}`);
-      console.log('===========================\n');
-      
       return {
         calculated: { y: result.y, x: result.x },
         expected: { y: expectedY, x: expectedX },
@@ -296,7 +292,6 @@ class EOVTransformer {
         gridUsed: result.gridUsed
       };
     } catch (err) {
-      console.error('❌ Teszt conversion sikertelen:', err.message);
       return null;
     }
   }
@@ -332,18 +327,12 @@ function convertFromSourceCoordinates(x, y) {
                 const etrf2000_from_wgs84 = AppState.transformer.wgs84_2etrf2000(x, y);
                 etrf2000Lat = etrf2000_from_wgs84.lat;
                 etrf2000Lon = etrf2000_from_wgs84.lon;
-                AppState.currentLatWGS84 = x;
-                AppState.currentLonWGS84 = y;
                 break;
                 
             case CONSTANTS.COORD_SYSTEMS.ETRF2000:
                 // ETRF2000 már a megfelelő formátumban van
                 etrf2000Lat = x;
                 etrf2000Lon = y;
-                // ETRF2000 (lat, lon) → WGS84
-                const wgs84_from_etrf2000 = AppState.transformer.etrf2000_2wgs84(x, y);
-                AppState.currentLatWGS84 = wgs84_from_etrf2000.lat;
-                AppState.currentLonWGS84 = wgs84_from_etrf2000.lon;
                 break;
                 
             case CONSTANTS.COORD_SYSTEMS.EOV:
@@ -351,23 +340,15 @@ function convertFromSourceCoordinates(x, y) {
                 const etrf2000_from_eov = AppState.transformer.eov2etrf2000(y, x); // y=lon-like, x=lat-like
                 etrf2000Lat = etrf2000_from_eov.lat;
                 etrf2000Lon = etrf2000_from_eov.lon;
-                // ETRF2000 → WGS84
-                const wgs84_from_eov = AppState.transformer.etrf2000_2wgs84(etrf2000Lat, etrf2000Lon);
-                AppState.currentLatWGS84 = wgs84_from_eov.lat;
-                AppState.currentLonWGS84 = wgs84_from_eov.lon;
                 AppState.currentEOVY = y;
                 AppState.currentEOVX = x;
                 break;
                 
             case CONSTANTS.COORD_SYSTEMS.SCREEN_CENTER:
-                // Térkép középpontja (WGS84)
+                // Térkép középpontja Leaflet-ből (már ETRF2000 síkban van)
                 const center = AppState.map.getCenter();
-                AppState.currentLatWGS84 = center.lat;
-                AppState.currentLonWGS84 = center.lng;
-                // WGS84 → ETRF2000
-                const etrf = AppState.transformer.wgs84_2etrf2000(AppState.currentLatWGS84, AppState.currentLonWGS84);
-                etrf2000Lat = etrf.lat;
-                etrf2000Lon = etrf.lon;
+                etrf2000Lat = center.lat;
+                etrf2000Lon = center.lng;
                 break;
                 
             default:
@@ -376,6 +357,8 @@ function convertFromSourceCoordinates(x, y) {
         }
         
         // ETRF2000 értékek beállítása
+        AppState.currentLatWGS84 = etrf2000Lat;  // Valójában ETRF2000!
+        AppState.currentLonWGS84 = etrf2000Lon;  // Valójában ETRF2000!
         AppState.currentLatETRF2000 = etrf2000Lat;
         AppState.currentLonETRF2000 = etrf2000Lon;
         
@@ -583,12 +566,10 @@ function convertPoint(lon, lat, projection) {
         // EOV koordináták kiszámítása
         const eov = AppState.transformer.etrf2000_2eov(etrf2000Lat, etrf2000Lon);
         
-        // WGS84 visszakonvertálása a GeoJSON-hoz
-        const wgs84 = AppState.transformer.etrf2000_2wgs84(etrf2000Lat, etrf2000Lon);
-        
+        // ETRF2000 koordináták használata (WGS84 konverzió nélkül)
         return { 
-            lon: wgs84.lon, 
-            lat: wgs84.lat,
+            lon: etrf2000Lon,  // ETRF2000 longitude
+            lat: etrf2000Lat,  // ETRF2000 latitude
             eov_x: eov.x,
             eov_y: eov.y
         };
@@ -606,8 +587,8 @@ function convertPoint(lon, lat, projection) {
         }
         
         return { 
-            lon: lon, 
-            lat: lat,
+            lon: lon,  // Original coordinate (ETRF2000 or input)
+            lat: lat,  // Original coordinate (ETRF2000 or input)
             eov_x: null,
             eov_y: null
         };

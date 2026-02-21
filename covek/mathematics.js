@@ -157,4 +157,66 @@ function calculatePointToLineDistance(pointEOV, lineStartEOV, lineEndEOV) {
     };
 }
 
+// Merőleges vetítés az ETRF2000 (lat/lon) síkban - kisebb távolságoknál pontosabb
+function calculatePointToLineDistanceETRF2000(pointETRF2000, lineStartETRF2000, lineEndETRF2000) {
+    const px = pointETRF2000.lon;  // lon (x)
+    const py = pointETRF2000.lat;  // lat (y)
+    const x1 = lineStartETRF2000.lon;
+    const y1 = lineStartETRF2000.lat;
+    const x2 = lineEndETRF2000.lon;
+    const y2 = lineEndETRF2000.lat;
+    
+    // Vonal vektora
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lineLengthSq = dx * dx + dy * dy;
+    
+    // Floating point precision: 1e-15 alatt tekintjük 0-nak (ETRF2000 koordináta-rendszer)
+    if (Math.abs(lineLengthSq) < 1e-15) {
+        const dpx = px - x1;
+        const dpy = py - y1;
+        return { 
+            distance: Math.sqrt(dpx * dpx + dpy * dpy), 
+            projection: { lat: y1, lon: x1 },
+            t: 0,
+            perpDistance: Math.sqrt(dpx * dpx + dpy * dpy),
+            originalProjection: { lat: y1, lon: x1 }
+        };
+    }
+    
+    // Pont vetítésének paramétere a vonalon (nem korlátozottá)
+    const dpx = px - x1;
+    const dpy = py - y1;
+    const t_original = (dpx * dx + dpy * dy) / lineLengthSq;
+    
+    // Vetület pont az eredeti egyenesen (nem korlátozott)
+    const projX_original = x1 + t_original * dx;
+    const projY_original = y1 + t_original * dy;
+    
+    // Merőleges távolság az egyeneshez
+    const perpDistX = px - projX_original;
+    const perpDistY = py - projY_original;
+    const perpDistance = Math.sqrt(perpDistX * perpDistX + perpDistY * perpDistY);
+    
+    // Korlátozás [0, 1] sorra (a végpontok közé)
+    const t_clamped = Math.max(0, Math.min(1, t_original));
+    
+    // Vetület pont a vonal végpontjai között
+    const projX = x1 + t_clamped * dx;
+    const projY = y1 + t_clamped * dy;
+    
+    // Távolság a legközelebb végponthoz
+    const distX = px - projX;
+    const distY = py - projY;
+    const distance = Math.sqrt(distX * distX + distY * distY);
+    
+    return { 
+        distance, 
+        projection: { lat: projY, lon: projX },
+        t: t_original,
+        perpDistance: perpDistance,
+        originalProjection: { lat: projY_original, lon: projX_original }
+    };
+}
+
 // Koordináta-transzformációs függvények az eov-transformer.js-ben
