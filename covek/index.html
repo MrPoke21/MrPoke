@@ -52,6 +52,17 @@
         <div id="distance-info-panel" class="distance-info-panel" style="display: none;">
             <div id="distance-text">—</div>
         </div>
+
+        <!-- Poligon információs panel az alján -->
+        <div id="polygon-info-panel" class="polygon-info-panel" style="display: none;">
+            <div class="polygon-info-header">
+                <strong>📍 Poligon</strong>
+                <span id="polygon-area" style="float: right; font-weight: bold; color: #ff6b35;">—</span>
+            </div>
+            <div id="polygon-properties" class="polygon-properties">
+                <!-- Properties dinamikusan jelennek meg -->
+            </div>
+        </div>
         
         <button class="hamburger" id="hamburgerBtn" aria-label="Menü">
             <span></span>
@@ -191,6 +202,7 @@
     <script src="logger.js"></script>
     <script src="validation.js"></script>
     <script src="eov-transformer.js"></script>
+    <script src="mathematics.js"></script>
     <script src="ui-controls.js"></script>
     <script src="script.js"></script>
 </body>
