@@ -12,17 +12,33 @@
     <!-- Leaflet Providers plugin -->
     <script src="https://unpkg.com/leaflet-providers@2.0.0/leaflet-providers.js"></script>
     
-    <!-- Proj4.js - unpkg CDN-ből -->
-    <script src="https://unpkg.com/proj4@2.9.1/dist/proj4.js"></script>
+    <!-- Proj4.js - unpkg CDN-ből (2.11.0+ szükséges nadgrid támogatáshoz) -->
+    <script src="https://unpkg.com/proj4@2.12.0/dist/proj4.js"></script>
     
     <!-- JSZip és shpjs (shapefile) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
     
+    <!-- GeoTIFF.js - HD72 grid betöltéshez szükséges -->
+    <script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+    
     <!-- Local styles -->
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+    <!-- Hiba megjelenítő panel -->
+    <div id="error-panel" class="error-panel" style="display: none;">
+        <div class="error-content">
+            <span id="error-icon">⚠️</span>
+            <div class="error-text">
+                <div id="error-title" style="font-weight: bold; margin-bottom: 5px;"></div>
+                <div id="error-message" style="font-size: 13px; color: #999;"></div>
+                <div id="error-value" style="font-family: monospace; margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; font-size: 12px;"></div>
+            </div>
+            <button id="error-close" class="error-close" aria-label="Bezárás">✕</button>
+        </div>
+    </div>
+
     <div class="container">
         <div id="map">
             <!-- Koordináta panel a térképen -->
@@ -123,6 +139,15 @@
                     <input type="checkbox" id="autoZoomEnable" style="margin-right: 8px;">
                     <span>Auto zoom műholdnézethez</span>
                 </label>
+            </div>
+
+            <!-- Grid Status -->
+            <div class="section">
+                <h3>🛰️ Grid státusz</h3>
+                <div id="gridStatus" style="font-size: 13px; line-height: 1.6;">
+                    <div><strong>Pontosság:</strong> <span id="gridAccuracy">—</span></div>
+                    <div><strong>Forrás:</strong> <span id="gridSource">—</span></div>
+                </div>
             </div>
 
             <!-- About -->

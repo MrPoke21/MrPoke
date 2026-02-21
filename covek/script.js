@@ -279,10 +279,10 @@ function removeMapLayers(...layers) {
 
 // Megjelenítés - csak a meglévő értékeket jeleníti meg
 function updateCoordinateDisplay() {
-    document.getElementById('lat').textContent = AppState.currentLatWGS84 ? AppState.currentLatWGS84.toFixed(8) : '—';
-    document.getElementById('lon').textContent = AppState.currentLonWGS84 ? AppState.currentLonWGS84.toFixed(8) : '—';
-    document.getElementById('latETRF').textContent = AppState.currentLatETRF2000 ? AppState.currentLatETRF2000.toFixed(8) : '—';
-    document.getElementById('lonETRF').textContent = AppState.currentLonETRF2000 ? AppState.currentLonETRF2000.toFixed(8) : '—';
+    document.getElementById('lat').textContent = AppState.currentLatWGS84 ? AppState.currentLatWGS84.toFixed(9) : '—';
+    document.getElementById('lon').textContent = AppState.currentLonWGS84 ? AppState.currentLonWGS84.toFixed(9) : '—';
+    document.getElementById('latETRF').textContent = AppState.currentLatETRF2000 ? AppState.currentLatETRF2000.toFixed(9) : '—';
+    document.getElementById('lonETRF').textContent = AppState.currentLonETRF2000 ? AppState.currentLonETRF2000.toFixed(9) : '—';
     document.getElementById('eovY').textContent = AppState.currentEOVY ? AppState.currentEOVY.toFixed(2) : '—';
     document.getElementById('eovX').textContent = AppState.currentEOVX ? AppState.currentEOVX.toFixed(2) : '—';
 }
@@ -701,10 +701,54 @@ function initTransformer() {
     try {
         AppState.transformer = new EOVTransformer();
         Logger_Transform.success('EOVTransformer inicializálva');
+        
+        // Grid status kijelzésének frissítése
+        updateGridStatusDisplay();
+        
+        // Test conversion ETRF2000 → EOV
+        setTimeout(() => {
+            AppState.transformer.testConversion();
+        }, 100);
+        
+        // Grid betöltésének megkísérlése
+        if (AppState.transformer && typeof AppState.transformer.loadGridFromWeb === 'function') {
+            AppState.transformer.loadGridFromWeb('etrs2eov_notowgs.gsb')
+                .then(success => {
+                    Logger_Transform.info('Grid betöltés eredménye:', success);
+                    updateGridStatusDisplay();
+                    
+                    // Test conversion újra a grid után
+                    AppState.transformer.testConversion();
+                })
+                .catch(err => {
+                    Logger_Transform.warn('Grid betöltés sikertelen, Helmert fallback használva');
+                    updateGridStatusDisplay();
+                });
+        }
     } catch (err) {
         Logger_Transform.error('EOVTransformer init sikertelen', err);
         showStatus('Koordináta transzformátor hiba: ' + ErrorRecovery.getUserMessage(err), 'error');
     }
+}
+
+// Grid status kijelzése frissítése
+function updateGridStatusDisplay() {
+    if (!AppState.transformer || typeof AppState.transformer.getGridStatus !== 'function') {
+        return;
+    }
+    
+    const gridStatus = AppState.transformer.getGridStatus();
+    const accuracyElement = document.getElementById('gridAccuracy');
+    const sourceElement = document.getElementById('gridSource');
+    
+    if (accuracyElement) {
+        accuracyElement.textContent = gridStatus.accuracy;
+    }
+    if (sourceElement) {
+        sourceElement.textContent = gridStatus.source;
+    }
+    
+    Logger_Transform.debug('Grid status frissítve', gridStatus);
 }
 
 // Térkép középpontja frissítése az oldalon megnyitáskor
@@ -1412,6 +1456,7 @@ window.addEventListener('DOMContentLoaded', () => {
         initProjectionModal();
         initFileFormatModal();
         initSourceModal();
+        initCoordinateCopyHandlers();
         
         Logger_App.success('✅ Alkalmazás inicializálása teljes');
     } catch (err) {

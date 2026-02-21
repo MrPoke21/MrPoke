@@ -2,20 +2,24 @@
  * Cövek Library - EOV ↔ ETRF2000 Coordinate Transformation
  * 
  * Standalone JavaScript library for converting between Hungarian EOV and ETRF2000/WGS84 coordinates.
- * Uses Proj4.js for projection mathematics and optional GeoTIFF for HD72 grid correction.
+ * Uses Proj4.js for projection mathematics and HD72 grid correction via nadgrid.
  * 
  * @version 4.0
  * @author Cövek Project
  * @license MIT
  * 
  * Dependencies:
- *   - proj4: https://cdn.jsdelivr.net/npm/proj4@2.20.0/dist/proj4.js
- *   - geotiff (optional): https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js
+ *   - proj4: https://unpkg.com/proj4@2.12.0/dist/proj4.js (minimum 2.12.0 for nadgrid support)
+ *   - GeoTIFF (optional): https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js
+ *
+ * Supported EPSG Codes:
+ *   - EPSG:23700 (HD72/EOV + Helmert fallback) - Custom definition with nadgrid support
+ *   - EPSG:23700_HELMERT (Helmert 7-parameter fallback) - For grid unavailability
  */
 
 class EOVTransformer {
   constructor() {
-    this.GRID_NAME = 'hu_bme_hd72corr.tif';
+    this.GRID_NAME = 'etrs2eov_notowgs.gsb';
     this.gridLoaded = false;
     this.proj4Ready = false;
     this.gridData = null;
@@ -41,18 +45,20 @@ class EOVTransformer {
       ' +no_defs'
     );
 
-    // EOV (Hungarian Unified National Projection)
-    proj4.defs('EOV',
+    // EPSG:23700 (Hungarian Unified National Projection with ETRS2EOV nadgrid)
+    // Grid is optional - proj4 will use Helmert fallback if grid is not found
+    proj4.defs('EPSG:23700',
       '+proj=somerc +lat_0=47.14439372222222 +lon_0=19.04857177777778' +
       ' +k_0=0.99993 +x_0=650000 +y_0=200000 +ellps=GRS67' +
-      ` +nadgrids=${this.GRID_NAME} +units=m +no_defs`
+      ` +nadgrids=@${this.GRID_NAME} +units=m +no_defs` +
+      ' +type=crs'
     );
 
-    // Fallback EOV without nadgrids (Helmert transformation)
-    proj4.defs('EOV_HELMERT',
+    // Fallback EPSG:23700 without nadgrids (Helmert transformation)
+    proj4.defs('EPSG:23700_HELMERT',
       '+proj=somerc +lat_0=47.14439372222222 +lon_0=19.04857177777778' +
       ' +k_0=0.99993 +x_0=650000 +y_0=200000 +ellps=GRS67' +
-      ' +towgs84=-52.684,62.195,39.925,0.01851,-0.14143,-0.04625,1.1091' +
+      ' +towgs84=52.17,-71.82,-14.9,0,0,0,0' +
       ' +units=m +no_defs'
     );
 
@@ -60,41 +66,36 @@ class EOVTransformer {
   }
 
   /**
-   * Load HD72 grid from web (same server where HTML is located)
-   * @param {string} [gridPath='hu_bme_hd72corr.tif'] - Path to grid file relative to HTML location
-   * @returns {Promise<boolean>} - Success status
+   * Check if grid file is available and accessible
+   * Load NADgrid (.gsb) file and register it with proj4.nadgrid
+   * @param {string} [gridPath='etrs2eov_notowgs.gsb'] - Path to grid file
+   * @returns {Promise<boolean>} - True if grid file is loaded successfully
    */
-  async loadGridFromWeb(gridPath = 'hu_bme_hd72corr.tif') {
-    if (typeof GeoTIFF === 'undefined') {
-      console.warn('GeoTIFF.js not loaded - grid support disabled');
-      return false;
-    }
-
-    // Check if running on file:// protocol (CORS issue)
-    if (window.location.protocol === 'file:') {
-      console.warn('Cannot load grid from file:// protocol due to CORS restrictions. Please use a local web server or upload the file manually.');
-      return false;
-    }
-
+  async loadGridFromWeb(gridPath = 'etrs2eov_notowgs.gsb') {
     try {
+      // Fetch the GeoTIFF file as ArrayBuffer
       const response = await fetch(gridPath);
+      
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      const buf = await response.arrayBuffer();
-
-      // Load into Proj4
-      const tiff = await GeoTIFF.fromArrayBuffer(buf);
-      await proj4.nadgrid(this.GRID_NAME, tiff).ready;
-
+      const arrayBuffer = await response.arrayBuffer();
+      
+      // Register grid with proj4 using ArrayBuffer
+      await proj4.nadgrid(gridPath, arrayBuffer).ready;
+      
       this.gridLoaded = true;
-      console.log('Grid loaded from web successfully');
+      console.log(`✅ Grid file loaded and registered: ${gridPath}`);
       return true;
     } catch (err) {
-      console.warn(`Could not load grid from web (${gridPath}):`, err.message);
-      return false;
+      // File not accessible or grid registration failed
+      console.warn(`⚠️ Failed to load grid file (${gridPath}): ${err.message}`);
     }
+    
+    this.gridLoaded = false;
+    console.log(`ℹ️ Grid file not accessible (${gridPath}) - Helmert fallback active`);
+    return false;
   }
 
   /**
@@ -104,8 +105,8 @@ class EOVTransformer {
   getGridStatus() {
     return {
       loaded: this.gridLoaded,
-      accuracy: this.gridLoaded ? '±0.1-0.5m (HD72 grid)' : '±2-5m (Helmert)',
-      source: this.gridLoaded ? 'HD72 nadgrid (hu_bme_hd72corr.tif)' : 'Helmert 7-parameter transformation'
+      accuracy: this.gridLoaded ? '±10-50 mm (ETRS2EOV)' : '±200-500 cm (Helmert)',
+      source: this.gridLoaded ? 'ETRS2EOV nadgrid (etrs2eov_notowgs.gsb)' : 'Helmert 7-parameter transformation'
     };
   }
 
@@ -122,14 +123,14 @@ class EOVTransformer {
 
     try {
       const targetProj = this.gridLoaded ? 'ETRF2000' : 'ETRF2000';
-      const sourceProj = this.gridLoaded ? 'EOV' : 'EOV_HELMERT';
+      const sourceProj = this.gridLoaded ? 'EPSG:23700' : 'EPSG:23700_HELMERT';
 
       const [lon, lat] = proj4(sourceProj, targetProj).forward([eovY, eovX]);
 
       return {
         lat: lat,
         lon: lon,
-        accuracy: this.gridLoaded ? '±0.1-0.5m' : '±2-5m',
+        accuracy: this.gridLoaded ? '±10-50 mm' : '±200-500 cm',
         gridUsed: this.gridLoaded
       };
     } catch (err) {
@@ -150,14 +151,14 @@ class EOVTransformer {
 
     try {
       const sourceProj = this.gridLoaded ? 'ETRF2000' : 'ETRF2000';
-      const targetProj = this.gridLoaded ? 'EOV' : 'EOV_HELMERT';
+      const targetProj = this.gridLoaded ? 'EPSG:23700' : 'EPSG:23700_HELMERT';
 
       const [eovY, eovX] = proj4(sourceProj, targetProj).forward([lon, lat]);
 
       return {
         y: eovY,
         x: eovX,
-        accuracy: this.gridLoaded ? '±0.1-0.5m' : '±2-5m',
+        accuracy: this.gridLoaded ? '±10-50 mm' : '±200-500 cm',
         gridUsed: this.gridLoaded
       };
     } catch (err) {
@@ -178,14 +179,14 @@ class EOVTransformer {
 
     try {
       const sourceProj = 'ITRF2014';
-      const targetProj = this.gridLoaded ? 'EOV' : 'EOV_HELMERT';
+      const targetProj = this.gridLoaded ? 'EPSG:23700' : 'EPSG:23700_HELMERT';
 
       const [eovY, eovX] = proj4(sourceProj, targetProj).forward([lon, lat]);
 
       return {
         y: eovY,
         x: eovX,
-        accuracy: this.gridLoaded ? '±0.1-0.5m' : '±2-5m',
+        accuracy: this.gridLoaded ? '±10-50 mm' : '±200-500 cm',
         gridUsed: this.gridLoaded
       };
     } catch (err) {
@@ -257,6 +258,48 @@ class EOVTransformer {
     return R * 2 * Math.asin(Math.sqrt(a));
   }
 
+
+  /**
+   * Test conversion: ETRF2000 → EOV
+   * Measures difference between calculated and expected result
+   */
+  testConversion() {
+    const lat = 46.940890424;  // ETRF2000 latitude
+    const lon = 19.234320340;  // ETRF2000 longitude
+    
+    const expectedY = 664226.871;  // Expected EOV Y
+    const expectedX = 177424.263;  // Expected EOV X
+    
+    try {
+      const result = this.etrf2000_2eov(lat, lon);
+      
+      const diffY = Math.abs(result.y - expectedY);
+      const diffX = Math.abs(result.x - expectedX);
+      const distDiff = Math.sqrt(diffY * diffY + diffX * diffX);
+      
+      console.log('=== ETRF2000 → EOV TESZT ===');
+      console.log(`Bemenet: ${lat}, ${lon}`);
+      console.log(`\nElvárt: Y=${expectedY}, X=${expectedX}`);
+      console.log(`Számított: Y=${result.y.toFixed(3)}, X=${result.x.toFixed(3)}`);
+      console.log(`\nKülönbség Y: ${diffY.toFixed(3)} m`);
+      console.log(`Különbség X: ${diffX.toFixed(3)} m`);
+      console.log(`Távolság különbség: ${distDiff.toFixed(3)} m`);
+      console.log(`Grid használat: ${result.gridUsed ? 'Igen' : 'Nem (Helmert fallback)'}`);
+      console.log(`Pontosság: ${result.accuracy}`);
+      console.log('===========================\n');
+      
+      return {
+        calculated: { y: result.y, x: result.x },
+        expected: { y: expectedY, x: expectedX },
+        diff: { y: diffY, x: diffX },
+        distance: distDiff,
+        gridUsed: result.gridUsed
+      };
+    } catch (err) {
+      console.error('❌ Teszt conversion sikertelen:', err.message);
+      return null;
+    }
+  }
 
 }
 
@@ -350,6 +393,15 @@ function convertFromSourceCoordinates(x, y) {
             
     } catch (err) {
         Logger_Transform.error(`Koordináta konverzió hiba (${source})`, err);
+        
+        // UI-ban megjelenítendő hiba
+        if (typeof showErrorPanel === 'function') {
+            showErrorPanel(
+                '❌ Koordináta konverzió hiba',
+                `Forrás: ${source} | Hiba: ${err.message}`,
+                { bemenet: { x, y }, hibakód: err.toString() }
+            );
+        }
         
         // Error recovery - fallback keresés
         const coords = { x: x, y: y };
@@ -543,6 +595,15 @@ function convertPoint(lon, lat, projection) {
     } catch (err) {
         Logger_Transform.error('Pont konvertálás sikertelen', err);
         Logger_Transform.debug('Fallback pont használva', { lon, lat });
+        
+        // UI-ban megjelenítendő hiba
+        if (typeof showErrorPanel === 'function') {
+            showErrorPanel(
+                '❌ Pont konvertálás hiba',
+                `Vetület: ${projection} | Hiba: ${err.message}`,
+                { input: { lon, lat }, fallback: 'Eredeti koordináták használva' }
+            );
+        }
         
         return { 
             lon: lon, 

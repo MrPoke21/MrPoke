@@ -224,3 +224,93 @@ function initSourceModal() {
         }
     });
 }
+
+// ============ KOORDINÁTA MÁSOLÁS VÁGÓLAPRA ============
+function initCoordinateCopyHandlers() {
+    // WGS84 koordináta pár
+    const coordRowWGS84 = document.querySelector('.coord-row:nth-child(1)');
+    if (coordRowWGS84) {
+        coordRowWGS84.style.cursor = 'pointer';
+        coordRowWGS84.addEventListener('click', () => {
+            const lat = document.getElementById('lat').textContent;
+            const lon = document.getElementById('lon').textContent;
+            if (lat !== '—' && lon !== '—') {
+                copyToClipboard(`${lat}, ${lon}`, 'WGS84');
+            }
+        });
+    }
+    
+    // ETRF2000 koordináta pár
+    const coordRowETRF = document.querySelector('.coord-row:nth-child(2)');
+    if (coordRowETRF) {
+        coordRowETRF.style.cursor = 'pointer';
+        coordRowETRF.addEventListener('click', () => {
+            const lat = document.getElementById('latETRF').textContent;
+            const lon = document.getElementById('lonETRF').textContent;
+            if (lat !== '—' && lon !== '—') {
+                copyToClipboard(`${lat}, ${lon}`, 'ETRF2000');
+            }
+        });
+    }
+    
+    // EOV koordináta pár
+    const coordRowEOV = document.querySelector('.coord-row:nth-child(3)');
+    if (coordRowEOV) {
+        coordRowEOV.style.cursor = 'pointer';
+        coordRowEOV.addEventListener('click', () => {
+            const y = document.getElementById('eovY').textContent;
+            const x = document.getElementById('eovX').textContent;
+            if (y !== '—' && x !== '—') {
+                copyToClipboard(`${y}, ${x}`, 'EOV');
+            }
+        });
+    }
+}
+
+// Koordináta másolása vágólapra
+function copyToClipboard(text, label) {
+    navigator.clipboard.writeText(text).then(() => {
+        showStatus(`✓ ${label} másolva: ${text}`, 'success');
+    }).catch(err => {
+        Logger_App.error('Másolás a vágólapra sikertelen', err);
+        showStatus(`✗ Másolás sikertelen`, 'error');
+    });
+}
+
+// Hiba megjelenítő panel
+function showErrorPanel(title, message, value = null) {
+    const errorPanel = document.getElementById('error-panel');
+    if (!errorPanel) return;
+    
+    const titleEl = document.getElementById('error-title');
+    const messageEl = document.getElementById('error-message');
+    const valueEl = document.getElementById('error-value');
+    
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    
+    if (value) {
+        valueEl.textContent = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+        valueEl.style.display = 'block';
+    } else {
+        valueEl.style.display = 'none';
+    }
+    
+    errorPanel.style.display = 'block';
+    
+    // Auto-hide után 8 másodperc
+    clearTimeout(errorPanel.hideTimeout);
+    errorPanel.hideTimeout = setTimeout(() => {
+        errorPanel.style.display = 'none';
+    }, 8000);
+}
+
+// Hiba panel bezárás gomb
+document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('error-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            document.getElementById('error-panel').style.display = 'none';
+        });
+    }
+});
