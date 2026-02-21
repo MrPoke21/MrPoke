@@ -17,7 +17,7 @@
     
     <!-- JSZip és shpjs (shapefile) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://unpkg.com/shpjs@3.4.3/dist/shp.js"></script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
     
     <!-- Local styles -->
     <link rel="stylesheet" href="style.css" />
@@ -77,9 +77,14 @@
             
             <!-- Shapefile upload -->
             <div class="section">
-                <h3>📁 Shapefile import</h3>
-                <label for="shapeFile">ZIP fájl (shapefile)</label>
-                <input type="file" id="shapeFile" accept=".zip" />
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <h3 style="margin: 0;">📁 Geometria import</h3>
+                    <button id="fileFormatHelpBtn" type="button" class="help-icon-btn" title="Támogatott fájltípusok" aria-label="Támogatott fájltípusok">
+                        ?
+                    </button>
+                </label>
+                <label for="shapeFile">ZIP (shapefile), SHP, vagy KML fájl</label>
+                <input type="file" id="shapeFile" accept=".zip,.shp,.kml" />
                 
                 <label for="shapeFileProjection" style="display: flex; align-items: center; gap: 8px;">
                     Vetület
@@ -92,7 +97,6 @@
                     <option value="etrf2000">ETRF2000</option>
                     <option value="eov" selected>EOV</option>
                 </select>
-                
                 <div id="shapeFileStatus"></div>
             </div>
 
@@ -169,6 +173,53 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-primary" id="projectionModalOK" type="button">Rendben</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fájl formátum információs modal -->
+    <div id="fileFormatModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ℹ️ Támogatott fájltípusok</h2>
+                <button class="modal-close" id="fileFormatModalClose" type="button" aria-label="Bezárás">✕</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Ez az alkalmazás három fájltípust támogat:</strong></p>
+                
+                <p><strong>📦 ZIP (Shapefile)</strong></p>
+                <p>A shapefile három file-ból áll, amelyet egy ZIP-be kell csomagolni:</p>
+                <ul>
+                    <li><strong>.shp</strong> – geometria (pontok, vonalak, poligonok)</li>
+                    <li><strong>.shx</strong> – index fájl (gyors hozzáféréshez szükséges)</li>
+                    <li><strong>.dbf</strong> – attribútum adatok (opcionális)</li>
+                </ul>
+                <p>🎯 <strong>Ajánlott formátum:</strong> Ez a legstabilabb és legzártabb megoldás.</p>
+                
+                <p><strong>📄 SHP (tömörítetlen shapefile)</strong></p>
+                <p>Ha csak az egyedi <strong>.shp fájlt</strong> töltöd fel, az alkalmazás automatikusan:</p>
+                <ul>
+                    <li>Generál egy dummy <strong>.dbf</strong> fájlt</li>
+                    <li>ZIP-be csomagol mindkettőt</li>
+                    <li>Feldolgozza a geometriát</li>
+                </ul>
+                <p>⚠️ <strong>Megjegyzés:</strong> Az attribútum adatok (név, terület, stb.) az info panelben nem jelennek meg.</p>
+                
+                <p><strong>🗺️ KML (Keyhole Markup Language)</strong></p>
+                <p>XML-alapú formátum, amely tartalmaz:</p>
+                <ul>
+                    <li>Point (pontok) – GPS koordinátákkal</li>
+                    <li>LineString (vonalak)</li>
+                    <li>Polygon (poligonok) – belső határokkal is</li>
+                    <li>Néveket és leírásokat</li>
+                </ul>
+                <p>✅ <strong>Előnye:</strong> Könnyen kezelhető, gyakran használt térkép alkalmazásokban (Google Maps, stb.)</p>
+                
+                <p><strong>💡 Koordináta rendszer:</strong></p>
+                <p>Az összes fájltípus esetén meg kell adni a <strong>bemeneti vetületet</strong> (vetület selektor). Az alkalmazás automatikusan EOV-ra transzformálja a koordinátákat.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="fileFormatModalOK" type="button">Rendben</button>
             </div>
         </div>
     </div>

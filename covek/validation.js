@@ -12,12 +12,12 @@ class ValidationService {
             return { valid: false, errors };
         }
 
-        // Fájl típus ellenőrzés - ZIP-nek kell lennie vagy .shp kiterjesztésű
-        const validExtensions = ['zip', 'shp', 'dbf', 'shx'];
+        // Fájl típus ellenőrzés - ZIP, .shp vagy .kml lehet
+        const validExtensions = ['zip', 'shp', 'kml'];
         const fileExtension = file.name.split('.').pop().toLowerCase();
         
         if (!validExtensions.includes(fileExtension)) {
-            errors.push(`Érvénytelen fájl típus: .${fileExtension}. Szükséges: .zip, .shp, .dbf, .shx`);
+            errors.push(`Érvénytelen fájl típus: .${fileExtension}. Szükséges: .zip, .shp vagy .kml`);
         }
 
         // Fájl méret ellenőrzés (max 50 MB)
@@ -26,9 +26,9 @@ class ValidationService {
             errors.push(`Fájl túl nagy: ${(file.size / 1024 / 1024).toFixed(2)} MB. Maximum: ${maxSize / 1024 / 1024}MB`);
         }
 
-        // Minimum fájl méret (legalább 1 KB)
-        if (file.size < 1024) {
-            errors.push('Fájl túl kicsi: valószínűleg üres vagy sérült');
+        // Minimum fájl méret (legalább 100 byte - csak az üres fájlok szűréséhez)
+        if (file.size < 100) {
+            errors.push('Fájl túl kicsi: valóban üres');
         }
 
         return {

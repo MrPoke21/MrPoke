@@ -143,6 +143,47 @@ function initProjectionModal() {
     });
 }
 
+// ============ FÁJL FORMÁTUM MODAL KEZELÉS ============
+function initFileFormatModal() {
+    const helpBtn = document.getElementById('fileFormatHelpBtn');
+    const modal = document.getElementById('fileFormatModal');
+    const closeBtn = document.getElementById('fileFormatModalClose');
+    const okBtn = document.getElementById('fileFormatModalOK');
+    
+    if (!helpBtn || !modal) return;
+    
+    // Modal megnyitása
+    helpBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        modal.style.display = 'flex';
+    });
+    
+    // Modal bezárása - close gomb
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+    
+    // Modal bezárása - OK gomb
+    okBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+    
+    // Modal bezárása - háttérre kattintás
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Modal bezárása - Escape gomb
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display !== 'none') {
+            modal.style.display = 'none';
+        }
+    });
+}
+
 // ============ FORRÁS MODAL KEZELÉS ============
 function initSourceModal() {
     const helpBtn = document.getElementById('sourceHelpBtn');
