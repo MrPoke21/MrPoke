@@ -36,7 +36,49 @@
   gtag('config', 'G-8V2L090DYV');
 </script>
 
-    
+    <script>
+
+// A dataLayer és a gtag függvény meghatározása.
+
+window.dataLayer = window.dataLayer || [];
+
+function gtag(){dataLayer.push(arguments);}
+ 
+
+// FONTOS - NE MÁSOLJA/ILLESSZE BE A RÉGIÓLISTA MÓDOSÍTÁSA NÉLKÜL
+
+// Alapértelmezett beleegyezés beállítása adott régiókra vonatkozóan az Ön követelményeinek megfelelően
+
+gtag('consent', 'default', {
+
+  'ad_storage': 'denied',
+
+  'ad_user_data': 'denied',
+
+  'ad_personalization': 'denied',
+
+  'analytics_storage': 'denied',
+
+ 'regions':[<ISO 3166-2 régiókódok listája>]
+
+});
+
+// Az alapértelmezett beleegyezés beállítása az összes többi régióra vonatkozóan az Ön követelményeinek megfelelően
+
+gtag('consent', 'default', {
+
+  'ad_storage': 'granted',
+
+  'ad_user_data': 'granted',
+
+  'ad_personalization': 'granted',
+
+  'analytics_storage': 'granted'
+
+});
+ 
+
+</script>
     <!-- Local styles -->
     <link rel="stylesheet" href="style.css" />
 </head>
