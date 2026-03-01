@@ -54,6 +54,7 @@ class EOVTransformer {
       ' +type=crs'
     );
 
+    
     // Fallback EPSG:23700 without nadgrids (Helmert transformation)
     proj4.defs('EPSG:23700_HELMERT',
       '+proj=somerc +lat_0=47.14439372222222 +lon_0=19.04857177777778' +
@@ -128,18 +129,20 @@ class EOVTransformer {
       throw new Error('Proj4.js not initialized');
     }
 
+    // Try nadgrid first (if loaded), fall back to Helmert on any failure
+    if (this.gridLoaded) {
+      try {
+        const [lon, lat] = proj4('EPSG:23700', 'ETRF2000').forward([eovY, eovX]);
+        return { lat, lon, accuracy: '±10-50 mm', gridUsed: true };
+      } catch (err) {
+        // Nadgrid lookup failed – disable it and fall through to Helmert
+        this.gridLoaded = false;
+      }
+    }
+
     try {
-      const targetProj = this.gridLoaded ? 'ETRF2000' : 'ETRF2000';
-      const sourceProj = this.gridLoaded ? 'EPSG:23700' : 'EPSG:23700_HELMERT';
-
-      const [lon, lat] = proj4(sourceProj, targetProj).forward([eovY, eovX]);
-
-      return {
-        lat: lat,
-        lon: lon,
-        accuracy: this.gridLoaded ? '±10-50 mm' : '±200-500 cm',
-        gridUsed: this.gridLoaded
-      };
+      const [lon, lat] = proj4('EPSG:23700_HELMERT', 'ETRF2000').forward([eovY, eovX]);
+      return { lat, lon, accuracy: '±200-500 cm', gridUsed: false };
     } catch (err) {
       throw new Error(`EOV to ETRF2000 conversion failed: ${err.message}`);
     }
@@ -156,18 +159,20 @@ class EOVTransformer {
       throw new Error('Proj4.js not initialized');
     }
 
+    // Try nadgrid first (if loaded), fall back to Helmert on any failure
+    if (this.gridLoaded) {
+      try {
+        const [eovY, eovX] = proj4('ETRF2000', 'EPSG:23700').forward([lon, lat]);
+        return { y: eovY, x: eovX, accuracy: '±10-50 mm', gridUsed: true };
+      } catch (err) {
+        // Nadgrid lookup failed – disable it and fall through to Helmert
+        this.gridLoaded = false;
+      }
+    }
+
     try {
-      const sourceProj = this.gridLoaded ? 'ETRF2000' : 'ETRF2000';
-      const targetProj = this.gridLoaded ? 'EPSG:23700' : 'EPSG:23700_HELMERT';
-
-      const [eovY, eovX] = proj4(sourceProj, targetProj).forward([lon, lat]);
-
-      return {
-        y: eovY,
-        x: eovX,
-        accuracy: this.gridLoaded ? '±10-50 mm' : '±200-500 cm',
-        gridUsed: this.gridLoaded
-      };
+      const [eovY, eovX] = proj4('ETRF2000', 'EPSG:23700_HELMERT').forward([lon, lat]);
+      return { y: eovY, x: eovX, accuracy: '±200-500 cm', gridUsed: false };
     } catch (err) {
       throw new Error(`ETRF2000 to EOV conversion failed: ${err.message}`);
     }
@@ -554,6 +559,8 @@ function convertPoint(lon, lat, projection) {
         let etrf2000Lon = lon;
         
         if (projection === 'eov') {
+            // shpjs .prj nélkül tölti be az EOV fájlt, tehát nyers EOV méter koordináták érkeznek
+            // (pl. Y≈648000, X≈221000) – mindig szükséges az eov2etrf2000 konverzió
             const result = AppState.transformer.eov2etrf2000(lon, lat);
             etrf2000Lat = result.lat;
             etrf2000Lon = result.lon;

@@ -76,7 +76,7 @@ const AppState = {
     selectedPolygon: null,
     allCornerMarkers: [],
     selectedPointEOV: { x: null, y: null },
-    selectedPointETRF2000: { lat: null, lon: null },
+    selectedPointCoord: null,
     selectedLineEOV: { start: null, end: null },
     selectedLineETRF2000: { start: null, end: null },
     selectedPolygonEOV: [],
@@ -119,12 +119,12 @@ const AppState = {
         return this.gpsWatchId;
     },
     
-    setSelectedPoint(eovPoint, etrf2000Point) {
+    setSelectedPoint(eovPoint, coord) {
         this.selectedPointEOV = eovPoint || { x: null, y: null };
-        this.selectedPointETRF2000 = etrf2000Point || { lat: null, lon: null };
+        this.selectedPointCoord = coord || null;
     },
     getSelectedPoint() {
-        return { eov: this.selectedPointEOV, etrf2000: this.selectedPointETRF2000 };
+        return { eov: this.selectedPointEOV, coord: this.selectedPointCoord };
     },
     
     setSelectedLine(eovLine, etrf2000Line) {
@@ -153,7 +153,7 @@ const AppState = {
         this.selectedCornerMarker = null;
         this.selectedPolygon = null;
         this.selectedPointEOV = { x: null, y: null };
-        this.selectedPointETRF2000 = { lat: null, lon: null };
+        this.selectedPointCoord = null;
         this.selectedLineEOV = { start: null, end: null };
         this.selectedLineETRF2000 = { start: null, end: null };
         this.selectedPolygonEOV = [];
@@ -307,13 +307,13 @@ function initMap() {
     // Alapértelmezett térképréteg
     const osmLayer = L.tileLayer.provider('OpenStreetMap.Mapnik', zoomOptions).addTo(AppState.map);
     
-    // Alternatív térképrétegek - AppState-ben tárolva az addMePARLayers() számára
+    // Alternatív térképrétegek
     AppState.baseMaps = {
         'OpenStreetMap': L.tileLayer.provider('OpenStreetMap.Mapnik', zoomOptions),
         'Esri Műholdkép': L.tileLayer.provider('Esri.WorldImagery', esriImageryOptions)
     };
     
-    // Overlay (be-/kikapcsolható) rétegek - AppState-ben tárolva, az addMePARLayers() később hozzáadja a rétegeket
+    // Overlay (be-/kikapcsolható) rétegek
     AppState.overlayMaps = {};
     
     // Térképkontrol hozzáadása és mentése az AppState-ben
@@ -435,12 +435,12 @@ function updateDistanceLine() {
     }
     
     // Sarokpont kiválasztva
-    if (AppState.selectedPointEOV.x && AppState.selectedPointEOV.y && AppState.selectedPointETRF2000.lat && AppState.selectedPointETRF2000.lon) {
+    if (AppState.selectedPointEOV.x && AppState.selectedPointEOV.y && AppState.selectedPointCoord) {
         distance = Math.sqrt(
             Math.pow(AppState.selectedPointEOV.x - AppState.currentEOVX, 2) + 
             Math.pow(AppState.selectedPointEOV.y - AppState.currentEOVY, 2)
         );
-        targetWGS84 = AppState.selectedPointETRF2000;
+        targetWGS84 = { lat: AppState.selectedPointCoord[1], lon: AppState.selectedPointCoord[0] };
     }
     // Vonal kiválasztva
     else if (AppState.selectedLineEOV.start && AppState.selectedLineEOV.end && AppState.selectedLineETRF2000.start && AppState.selectedLineETRF2000.end) {
@@ -613,8 +613,8 @@ function performAutoZoom() {
     ]);
     
     // Kijelölt pont hozzáadása
-    if (AppState.selectedPointETRF2000.lat && AppState.selectedPointETRF2000.lon) {
-        bounds.extend([AppState.selectedPointETRF2000.lat, AppState.selectedPointETRF2000.lon]);
+    if (AppState.selectedPointCoord) {
+        bounds.extend([AppState.selectedPointCoord[1], AppState.selectedPointCoord[0]]);
     }
     // Kijelölt vonal hozzáadása
     else if (AppState.selectedLineETRF2000.start && AppState.selectedLineETRF2000.end) {
@@ -1055,6 +1055,37 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                 }
             }
             
+            // EOV fájl esetén a .prj-t el kell távolítani, hogy az shpjs ne reprojectálja
+            // a saját (hiányos) definíciójával – a mi transzformerünk végzi a pontos konverziót
+            const projectionSelected = document.getElementById('shapeFileProjection').value;
+            if (projectionSelected === 'eov') {
+                try {
+                    const jszip = new JSZip();
+                    const zip = await jszip.loadAsync(processedBuffer);
+                    let hasPrj = false;
+                    const filesToCopy = [];
+                    zip.forEach((path, zipEntry) => {
+                        if (path.toLowerCase().endsWith('.prj')) {
+                            hasPrj = true;
+                            Logger_Shapefile.debug('EOV: .prj fájl eltávolítása a helyes konverzióhoz', { name: path });
+                        } else {
+                            filesToCopy.push({ path, zipEntry });
+                        }
+                    });
+                    if (hasPrj) {
+                        const newZip = new JSZip();
+                        for (const { path, zipEntry } of filesToCopy) {
+                            const data = await zipEntry.async('arraybuffer');
+                            newZip.file(path, data);
+                        }
+                        processedBuffer = await newZip.generateAsync({ type: 'arraybuffer' });
+                        Logger_Shapefile.info('EOV: .prj eltávolítva, nyers EOV méter koordináták kerülnek feldolgozásra');
+                    }
+                } catch (prjStripErr) {
+                    Logger_Shapefile.warn('EOV: .prj eltávolítás sikertelen, folytatás eredeti bufferyel', prjStripErr.message);
+                }
+            }
+
             // shp.load() hívása timeout-tal és enhanced error handling
             Logger_Shapefile.debug('shp.load() indítása');
             let shapeData;
@@ -1363,8 +1394,8 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                                 const markerSize = getCornerMarkerSize(currentZoom);
                                 cornerMarker.setIcon(getCornerMarkerIcon('red', markerSize));
                                 
-                                // ETRF2000 és EOV koordináták már a properties-ben vannak (a corner index alapján)
-                                AppState.selectedPointETRF2000 = { lat: coord[1], lon: coord[0] };
+                                // EOV koordináták a corner index alapján
+                                AppState.selectedPointCoord = coord;
                                 
                                 if (feature.properties && feature.properties.eov_corners) {
                                     AppState.selectedPointEOV = feature.properties.eov_corners[index];
@@ -1374,7 +1405,7 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
                                 
                                 // Távolságvonal rajzolása
                                 updateDistanceLine();
-                                Logger_Map.debug('Sarokpont kiválasztva', { coord, index, eov: AppState.selectedPointEOV, etrf2000: AppState.selectedPointETRF2000 });
+                                Logger_Map.debug('Sarokpont kiválasztva', { coord, index, eov: AppState.selectedPointEOV });
                             }
                         });
                         
@@ -1410,7 +1441,19 @@ window.addEventListener('DOMContentLoaded', () => {
     
     try {
         initMap();
-        initTransformer();
+
+        // EOVTransformer inicializálás
+        try {
+            AppState.transformer = new EOVTransformer();
+            Logger_Transform.success('EOVTransformer inicializálva');
+            if (typeof updateGridStatusDisplay === 'function') updateGridStatusDisplay();
+            AppState.transformer.loadGridFromWeb('etrs2eov_notowgs.gsb')
+                .then(() => { if (typeof updateGridStatusDisplay === 'function') updateGridStatusDisplay(); })
+                .catch(() => { Logger_Transform.warn('Grid betöltés sikertelen, Helmert fallback használva'); });
+        } catch (err) {
+            Logger_Transform.error('EOVTransformer init sikertelen', err);
+        }
+
         startGPSTracking();
         initMobileMenu();
         initCoordPanelDrag();
