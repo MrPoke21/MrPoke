@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cövek Library - EOV ↔ ETRF2000 Coordinate Transformation
  * 
  * Standalone JavaScript library for converting between Hungarian EOV and ETRF2000/WGS84 coordinates.
@@ -22,7 +22,6 @@ class EOVTransformer {
     this.GRID_NAME = 'etrs2eov_notowgs.gsb';
     this.gridLoaded = false;
     this.proj4Ready = false;
-    this.gridData = null;
 
     this.initProj4();
   }
@@ -108,16 +107,6 @@ class EOVTransformer {
     };
   }
 
-
-
-  getGridStatus() {
-    return {
-      loaded: this.gridLoaded,
-      accuracy: this.gridLoaded ? '±10-50 mm (ETRS2EOV)' : '±200-500 cm (Helmert)',
-      source: this.gridLoaded ? 'ETRS2EOV nadgrid (etrs2eov_notowgs.gsb)' : 'Helmert 7-parameter transformation'
-    };
-  }
-
   /**
    * Convert EOV coordinates to ETRF2000 (WGS84)
    * @param {number} eovY - EOV Y (Easting) in meters
@@ -179,57 +168,6 @@ class EOVTransformer {
   }
 
   /**
-   * Convert WGS84 coordinates to EOV
-   * @param {number} lat - Latitude in degrees
-   * @param {number} lon - Longitude in degrees
-   * @returns {Object} - {y, x, accuracy}
-   */
-  wgs84_2eov(lat, lon) {
-    if (!this.proj4Ready) {
-      throw new Error('Proj4.js not initialized');
-    }
-
-    try {
-      const sourceProj = 'ITRF2014';
-      const targetProj = this.gridLoaded ? 'EPSG:23700' : 'EPSG:23700_HELMERT';
-
-      const [eovY, eovX] = proj4(sourceProj, targetProj).forward([lon, lat]);
-
-      return {
-        y: eovY,
-        x: eovX,
-        accuracy: this.gridLoaded ? '±10-50 mm' : '±200-500 cm',
-        gridUsed: this.gridLoaded
-      };
-    } catch (err) {
-      throw new Error(`WGS84 to EOV conversion failed: ${err.message}`);
-    }
-  }
-
-  /**
-   * Convert ETRF2000 coordinates to WGS84
-   * @param {number} lat - Latitude in degrees (ETRF2000)
-   * @param {number} lon - Longitude in degrees (ETRF2000)
-   * @returns {Object} - {lat, lon}
-   */
-  etrf2000_2wgs84(lat, lon) {
-    if (!this.proj4Ready) {
-      throw new Error('Proj4.js not initialized');
-    }
-
-    try {
-      const [wgs84Lon, wgs84Lat] = proj4('ETRF2000', 'ITRF2014').forward([lon, lat]);
-
-      return {
-        lat: wgs84Lat,
-        lon: wgs84Lon
-      };
-    } catch (err) {
-      throw new Error(`ETRF2000 to WGS84 conversion failed: ${err.message}`);
-    }
-  }
-
-  /**
    * Convert WGS84 coordinates to ETRF2000
    * @param {number} lat - Latitude in degrees (WGS84)
    * @param {number} lon - Longitude in degrees (WGS84)
@@ -252,54 +190,6 @@ class EOVTransformer {
     }
   }
 
-  /**
-   * Haversine distance between two geographic points
-   * @param {number} lat1 - Latitude 1
-   * @param {number} lon1 - Longitude 1
-   * @param {number} lat2 - Latitude 2
-   * @param {number} lon2 - Longitude 2
-   * @returns {number} - Distance in meters
-   */
-  haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // Earth radius in meters
-    const dφ = (lat2 - lat1) * Math.PI / 180;
-    const dλ = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dφ / 2) ** 2 +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dλ / 2) ** 2;
-    return R * 2 * Math.asin(Math.sqrt(a));
-  }
-
-
-  /**
-   * Test conversion: ETRF2000 → EOV
-   * Measures difference between calculated and expected result
-   */
-  testConversion() {
-    const lat = 46.940890424;  // ETRF2000 latitude
-    const lon = 19.234320340;  // ETRF2000 longitude
-    
-    const expectedY = 664226.871;  // Expected EOV Y
-    const expectedX = 177424.263;  // Expected EOV X
-    
-    try {
-      const result = this.etrf2000_2eov(lat, lon);
-      
-      const diffY = Math.abs(result.y - expectedY);
-      const diffX = Math.abs(result.x - expectedX);
-      const distDiff = Math.sqrt(diffY * diffY + diffX * diffX);
-      
-      return {
-        calculated: { y: result.y, x: result.x },
-        expected: { y: expectedY, x: expectedX },
-        diff: { y: diffY, x: diffX },
-        distance: distDiff,
-        gridUsed: result.gridUsed
-      };
-    } catch (err) {
-      return null;
-    }
-  }
 
 }
 
@@ -350,10 +240,15 @@ function convertFromSourceCoordinates(x, y) {
                 break;
                 
             case CONSTANTS.COORD_SYSTEMS.SCREEN_CENTER:
-                // Térkép középpontja Leaflet-ből (már ETRF2000 síkban van)
-                const center = AppState.map.getCenter();
-                etrf2000Lat = center.lat;
-                etrf2000Lon = center.lng;
+                // OL map: view.getCenter() returns [eovEasting, eovNorthing] in EPSG:23700
+                // eovCenter[0] = easting = eovY (app naming), eovCenter[1] = northing = eovX (app naming)
+                const eovCenter = AppState.map.getView().getCenter(); // [eovY(easting), eovX(northing)]
+                const etrf_center = AppState.transformer.eov2etrf2000(eovCenter[0], eovCenter[1]);
+                etrf2000Lat = etrf_center.lat;
+                etrf2000Lon = etrf_center.lon;
+                // EOV-t közvetlenül az OL center-ből vesszük – nincs körkonverziós hiba
+                AppState.currentEOVY = eovCenter[0];
+                AppState.currentEOVX = eovCenter[1];
                 break;
                 
             default:
@@ -368,7 +263,7 @@ function convertFromSourceCoordinates(x, y) {
         AppState.currentLonETRF2000 = etrf2000Lon;
         
         // ETRF2000 → EOV konverzió (ha még nem van EOV)
-        if (source !== 'eov') {
+        if (source !== 'eov' && source !== CONSTANTS.COORD_SYSTEMS.SCREEN_CENTER) {
             const eov = AppState.transformer.etrf2000_2eov(etrf2000Lat, etrf2000Lon);
             AppState.currentEOVY = eov.y;
             AppState.currentEOVX = eov.x;
@@ -558,27 +453,38 @@ function convertPoint(lon, lat, projection) {
         let etrf2000Lat = lat;
         let etrf2000Lon = lon;
         
+        let eov_x, eov_y;
+
         if (projection === 'eov') {
             // shpjs .prj nélkül tölti be az EOV fájlt, tehát nyers EOV méter koordináták érkeznek
-            // (pl. Y≈648000, X≈221000) – mindig szükséges az eov2etrf2000 konverzió
-            const result = AppState.transformer.eov2etrf2000(lon, lat);
-            etrf2000Lat = result.lat;
-            etrf2000Lon = result.lon;
+            // (pl. Y≈648000, X≈221000) – lon=eovY(easting), lat=eovX(northing)
+            // eov_x/eov_y az eov_corners property-hez (3 tizedes jegy)
+            eov_x = Math.round(lat * 1000) / 1000;  // lat = EOV X (northing)
+            eov_y = Math.round(lon * 1000) / 1000;  // lon = EOV Y (easting)
+            // Geometria koordinátákat NEM konvertáljuk – az OL dataProjection:'EPSG:23700'-val
+            // veszi át közvetlenül, nincs kettős konverzió (EOV→ETRF2000→EOV).
+            return { lon: lon, lat: lat, eov_x, eov_y };
         } else if (projection === 'wgs84') {
             const result = AppState.transformer.wgs84_2etrf2000(lat, lon);
             etrf2000Lat = result.lat;
             etrf2000Lon = result.lon;
+            // etrf2000_2eov teljes float64 pontossággal (nincs kerekítés)
+            const eov = AppState.transformer.etrf2000_2eov(etrf2000Lat, etrf2000Lon);
+            eov_x = eov.x;
+            eov_y = eov.y;
+        } else {
+            // ETRF2000 eset: etrf2000_2eov teljes float64 pontossággal (nincs kerekítés)
+            const eov = AppState.transformer.etrf2000_2eov(etrf2000Lat, etrf2000Lon);
+            eov_x = eov.x;
+            eov_y = eov.y;
         }
         
-        // EOV koordináták kiszámítása
-        const eov = AppState.transformer.etrf2000_2eov(etrf2000Lat, etrf2000Lon);
-        
-        // ETRF2000 koordináták használata (WGS84 konverzió nélkül)
+        // EOV koordináták visszaadása – OL dataProjection:'EPSG:23700' közvetlenül veszi át
         return { 
-            lon: etrf2000Lon,  // ETRF2000 longitude
-            lat: etrf2000Lat,  // ETRF2000 latitude
-            eov_x: eov.x,
-            eov_y: eov.y
+            lon: eov_y,  // EOV Y (easting) – OL geometry [easting, northing]
+            lat: eov_x,  // EOV X (northing)
+            eov_x,
+            eov_y
         };
     } catch (err) {
         Logger_Transform.error('Pont konvertálás sikertelen', err);

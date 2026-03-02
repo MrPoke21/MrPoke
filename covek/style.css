@@ -16,6 +16,41 @@ body {
     z-index: 1;
 }
 
+/* Képernyő közép keresztjelölő – CSS-alapon, mindig pontosan középen */
+#screen-center-crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    pointer-events: none;
+    z-index: 600;
+}
+#screen-center-crosshair::before,
+#screen-center-crosshair::after {
+    content: '';
+    position: absolute;
+    background: red;
+    border-radius: 1px;
+}
+#screen-center-crosshair::before {
+    /* vízszintes vonal */
+    width: 100%;
+    height: 3px;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+#screen-center-crosshair::after {
+    /* függőleges vonal */
+    width: 3px;
+    height: 100%;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 /* Koordináta panel a térképen */
 .coord-panel {
     position: absolute;
