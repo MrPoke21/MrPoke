@@ -469,6 +469,11 @@ button:hover {
     color: #e65100;
 }
 
+.success {
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
 /* Mobil responsz */
 @media (max-width: 768px) {
     .container {
@@ -756,4 +761,213 @@ button:hover {
     .modal-footer {
         padding: 16px;
     }
+}
+
+/* ── Munkamenet toast ───────────────────────────────────────────────────────────── */
+
+#session-save-toast {
+    position: absolute;
+    z-index: 2000;
+    bottom: 18px;
+    right: 14px;
+    background: rgba(20, 20, 20, 0.88);
+    color: #fff;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    white-space: nowrap;
+}
+
+#session-save-toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ── Poligon rajzolás sáv ────────────────────────────────────────────────────────────── */
+
+#draw-polygon-bar {
+    position: absolute;
+    z-index: 1500;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: rgba(20, 20, 20, 0.93);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 8px 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: all;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: calc(100% - 20px);
+}
+
+#draw-status-text {
+    flex: 1 1 100%;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 4px;
+}
+
+#draw-polygon-bar button {
+    border: none;
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: #fff;
+}
+
+#draw-polygon-bar button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+#draw-finish-btn  { background: #2e7d32; }
+#draw-finish-btn:not(:disabled):hover  { background: #388e3c; }
+#draw-add-btn     { background: #1565c0; }
+#draw-add-btn:hover     { background: #1976d2; }
+#draw-undo-btn    { background: rgba(255,255,255,0.12); }
+#draw-undo-btn:not(:disabled):hover    { background: rgba(255,152,0,0.5); }
+#draw-cancel-btn  { background: rgba(180,0,0,0.45); }
+#draw-cancel-btn:hover  { background: rgba(220,0,0,0.6); }
+
+/* Rajzolás mód kurzor */
+#map.draw-active { cursor: crosshair !important; }
+#map.draw-active canvas { cursor: crosshair !important; }
+
+/* ── Vonal Hozzáad gomb ────────────────────────────────────────────────────────────── */
+
+#line-add-btn {
+    position: absolute;
+    z-index: 1500;
+    display: none;
+    background: rgba(30, 30, 30, 0.93);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 7px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.45);
+    white-space: nowrap;
+    pointer-events: all;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+#line-add-btn:hover {
+    background: rgba(46,125,50,0.92);
+}
+
+/* ── Sarokpont akció menü ───────────────────────────────────────────────────── */
+
+#corner-action-menu {
+    position: absolute;
+    z-index: 1500;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    min-width: 145px;
+    pointer-events: all;
+}
+
+#corner-action-menu button {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 7px 12px;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+#corner-action-menu button:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+#corner-action-menu .cam-close {
+    align-self: flex-end;
+    padding: 2px 7px;
+    font-size: 11px;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+}
+
+#corner-action-menu .cam-close:hover {
+    color: #fff;
+    background: rgba(255,0,0,0.25);
+}
+
+/* ── Mozgatás megerősítés sáv ───────────────────────────────────────────────── */
+
+#corner-move-confirm {
+    position: absolute;
+    z-index: 1500;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 10px 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: all;
+}
+
+#corner-move-confirm button {
+    border: none;
+    border-radius: 5px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+#cmc-btn-ok {
+    background: #2e7d32;
+    color: #fff;
+}
+
+#cmc-btn-ok:hover {
+    background: #388e3c;
+}
+
+#cmc-btn-cancel {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+}
+
+#cmc-btn-cancel:hover {
+    background: rgba(255,0,0,0.3);
 }

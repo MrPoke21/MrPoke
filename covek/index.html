@@ -80,6 +80,35 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     </div>
                 </div>
             </div>
+
+            <!-- Sarokpont akció menü -->
+            <div id="corner-action-menu" style="display:none">
+                <button id="cam-btn-close" class="cam-close" onclick="hideCornerActionMenu()" title="Bezár">&#x2715;</button>
+                <button id="cam-btn-delete" onclick="onCornerActionDelete()">&#x1F5D1; Törlés</button>
+                <button id="cam-btn-move" onclick="onCornerActionMove()">&#x2725; Mozgatás</button>
+            </div>
+
+            <!-- Munkamenet mentés toast -->
+            <div id="session-save-toast"></div>
+
+            <!-- Poligon rajzolás sáv -->
+            <div id="draw-polygon-bar" style="display:none">
+                <span id="draw-status-text">Kattints a térképre</span>
+                <button id="draw-add-btn" onclick="addCurrentPositionPoint()">&#x1F4CD; Pont hozzáadása</button>
+                <button id="draw-undo-btn" onclick="undoDrawPoint()" disabled>&#x21A9; Visszavon</button>
+                <button id="draw-finish-btn" onclick="finishDrawPolygon()" disabled>&#x2713; Kész</button>
+                <button id="draw-cancel-btn" onclick="cancelDrawPolygon()">&#x2715; Mégse</button>
+            </div>
+
+            <!-- Vonal felezőpont hozzáadás gomb -->
+            <div id="line-add-btn" style="display:none" onclick="insertMidpointOnLine()">&#x2795; Hozzáad</div>
+
+            <!-- Mozgatás megerősítés sáv -->
+            <div id="corner-move-confirm" style="display:none">
+                <span>&#x1F4CD; Mozgatás aktív – követi a pillanatnyi pozíciót</span>
+                <button id="cmc-btn-ok" onclick="commitCornerMove()">&#x2713; OK</button>
+                <button id="cmc-btn-cancel" onclick="cancelCornerMove()">&#x2715; Mégse</button>
+            </div>
         </div>
         
         <!-- Mérési távolság panel az alján -->
@@ -166,6 +195,39 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <div><strong>Pontosság:</strong> <span id="gridAccuracy">—</span></div>
                     <div><strong>Forrás:</strong> <span id="gridSource">—</span></div>
                 </div>
+            </div>
+
+            <!-- Poligon rajzolás -->
+            <div class="section">
+                <h3>✏️ Poligon rajzolás</h3>
+                <button type="button" onclick="startDrawPolygon()" style="width:100%">
+                    ➕ Új poligon rajzolása
+                </button>
+                <button type="button" onclick="sessionReset()" style="width:100%; margin-top:6px; background:rgba(180,0,0,0.55); color:#fff;" title="Minden geometria és mentett munkamenet törlése">
+                    🗑️ Munkamenet törlése
+                </button>
+            </div>
+
+            <!-- Geometria export -->
+            <div class="section">
+                <h3>📤 Geometria export</h3>
+
+                <label for="exportFormat">Fájlformátum</label>
+                <select id="exportFormat">
+                    <option value="shp" selected>SHP (ZIP tömörítve)</option>
+                    <option value="kml">KML</option>
+                </select>
+
+                <label for="exportCRS">Koordináta rendszer</label>
+                <select id="exportCRS">
+                    <option value="eov" selected>EOV (EPSG:23700)</option>
+                    <option value="etrf2000">ETRF2000</option>
+                </select>
+
+                <button id="exportBtn" type="button" onclick="exportGeometries()" style="width:100%; margin-top:4px;">
+                    ⬇️ Letöltés
+                </button>
+                <div id="exportStatus" hidden></div>
             </div>
 
             <!-- About -->
@@ -299,6 +361,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <script src="mathematics.js"></script>
     <script src="ui-controls.js"></script>
     <script src="mepar-layers.js"></script>
+    <script src="file-export.js"></script>
     <script src="script.js"></script>
+    <script src="point-editor.js"></script>
+    <script src="session-store.js"></script>
+    <script src="file-handler.js"></script>
 </body>
 </html>
