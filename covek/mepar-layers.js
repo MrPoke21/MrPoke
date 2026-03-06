@@ -6,14 +6,14 @@
  * - WMS URL : https://mepar.mvh.allamkincstar.gov.hu/api/proxy/iier-gs/wms
  * - Layer   : iier:EK_HRSZ_POLY
  * - Proj    : EPSG:23700 (EOV/HD72)
- * - VERSION : 1.3.0 + CRS=EPSG:23700 (bundle: v13_=true â†’ CRS param)
+ * - VERSION : 1.3.0 + CRS=EPSG:23700 (bundle: v13_=true → CRS param)
  *
- * VIEWPARAMS verziĂłkĂ¶vetĂ©s:
- *   A MePAR /fedveny/vonev_map API CORS miatt nem hĂ­vhatĂł bĂ¶ngĂ©szĹ‘bĹ‘l.
- *   LokĂˇlis szĂˇmĂ­tĂˇs: VONEV = aktuĂˇlis Ă©v, TOLDA = ${Ă©v}0301, IGDAT = ${Ă©v+1}0228
+ * VIEWPARAMS verziókövetés:
+ *   A MePAR /fedveny/vonev_map API CORS miatt nem hívható böngészőből.
+ *   Lokális számítás: VONEV = aktuális év, TOLDA = ${év}0301, IGDAT = ${év+1}0228
  *
- * @version 5.0 (OpenLayers 8, EPSG:23700 natĂ­v, TileWMS)
- * @author CĂ¶vek Project
+ * @version 5.0 (OpenLayers 8, EPSG:23700 natív, TileWMS)
+ * @author Cövek Project
  * @license MIT
  *
  * Dependencies:
@@ -26,9 +26,9 @@
 const MEPAR_WMS_URL = 'https://mepar.mvh.allamkincstar.gov.hu/api/proxy/iier-gs/wms';
 
 /**
- * Ismert vonev adatok a /fedveny/vonev_map API-bĂłl (CORS miatt statikusan beĂˇgyazva).
- * DĂˇtumformĂˇtum az API-ban: "YYYY-MM-DD" â†’ VIEWPARAMS-hoz kĂ¶tĹ‘jel nĂ©lkĂĽl: "YYYYMMDD"
- * FrissĂ­tendĹ‘, ha Ăşj kampĂˇnyĂ©v kerĂĽl a MePAR rendszerbe.
+ * Ismert vonev adatok a /fedveny/vonev_map API-ból (CORS miatt statikusan beágyazva).
+ * Dátumformátum az API-ban: "YYYY-MM-DD" → VIEWPARAMS-hoz kötőjel nélkül: "YYYYMMDD"
+ * Frissítendő, ha új kampányév kerül a MePAR rendszerbe.
  */
 const VONEV_MAP = {
     2013: { vonev: 2013, tolda: "2013-03-01", igdat: "2014-02-28" },
@@ -47,9 +47,9 @@ const VONEV_MAP = {
 };
 
 /**
- * AktuĂˇlis vonev adatok visszaadĂˇsa a statikus VONEV_MAP-bĹ‘l.
- * A legmagasabb Ă©vet veszi (= aktuĂˇlis kampĂˇnyĂ©v).
- * DĂˇtumokbĂłl eltĂˇvolĂ­tja a kĂ¶tĹ‘jeleket: "2025-03-01" â†’ "20250301"
+ * Aktuális vonev adatok visszaadása a statikus VONEV_MAP-ből.
+ * A legmagasabb évet veszi (= aktuális kampányév).
+ * Dátumokból eltávolítja a kötőjeleket: "2025-03-01" → "20250301"
  *
  * @returns {{vonev: string, tolda: string, igdat: string}}
  */
@@ -74,23 +74,23 @@ function getCurrentVonev() {
  */
 function initMePARLayers() {
     if (!AppState.map || !AppState.overlayMaps) {
-        Logger_Map.warn('initMePARLayers: SzĂĽksĂ©ges AppState objektumok nem elĂ©rhetĹ‘k');
+        Logger_Map.warn('initMePARLayers: Szükséges AppState objektumok nem elérhetők');
         return;
     }
 
     try {
         addHRSZLayer(getCurrentVonev());
-        Logger_Map.success('MePAR rĂ©tegek inicializĂˇlva (HRSZ)');
+        Logger_Map.success('MePAR rétegek inicializálva (HRSZ)');
     } catch (err) {
-        Logger_Map.error('MePAR rĂ©tegek inicializĂˇlĂˇsa sikertelen', err.message);
+        Logger_Map.error('MePAR rétegek inicializálása sikertelen', err.message);
     }
 }
 
 /**
  * Create and add HRSZ cadastral overlay layer using OpenLayers TileWMS.
  *
- * Bundle forrĂˇs:
- *   - di[v13_ ? "CRS" : "SRS"] = Ze.getCode()  â†’ VERSION=1.3.0, CRS=EPSG:23700
+ * Bundle forrás:
+ *   - di[v13_ ? "CRS" : "SRS"] = Ze.getCode()  → VERSION=1.3.0, CRS=EPSG:23700
  *   - maxResolution: P[3].resolution = 140 m/px
  *   - layer: "iier:EK_HRSZ_POLY"
  *
@@ -100,7 +100,7 @@ function initMePARLayers() {
 function addHRSZLayer(vonevData) {
     try {
         if (!AppState.map || !AppState.overlayMaps) {
-            Logger_Map.warn('addHRSZLayer: SzĂĽksĂ©ges objektumok nem elĂ©rhetĹ‘k');
+            Logger_Map.warn('addHRSZLayer: Szükséges objektumok nem elérhetők');
             return null;
         }
 
@@ -109,14 +109,16 @@ function addHRSZLayer(vonevData) {
 
         Logger_Map.debug('HRSZ VIEWPARAMS:', viewParams);
 
-        // Tile grid â€“ bundle WMTS resolution-Ă¶kkel (RESOLUTIONS globĂˇlis a script.js-bĹ‘l)
+        // Tile grid – bundle WMTS resolution-ökkel (RESOLUTIONS globális a script.js-ből)
         const tileGrid = new ol.tilegrid.TileGrid({
             extent: typeof MAP_EXTENT !== 'undefined' ? MAP_EXTENT : [227130, -159436, 1150289, 574373],
             resolutions: typeof RESOLUTIONS !== 'undefined' ? RESOLUTIONS : [1120, 560, 280, 140, 55.99, 27.99, 13.99, 5.6, 2.8, 1.4, 0.559, 0.28, 0.14, 0.056, 0.028],
             tileSize: 256
         });
 
-        // TileWMS source â€“ bundle: v13_=true â†’ VERSION 1.3.0 + CRS=EPSG:23700 BBOX
+        // TileWMS source – bundle: v13_=true → VERSION 1.3.0 + CRS=EPSG:23700 BBOX
+        // hidpi: false �" megakadályozza, hogy OL devicePixelRatio alapján �!tméretezze a tile-t
+        // és FORMAT_OPTIONS=dpi:X paramétert adjon hozzá (400 Bad Request mobilon)
         const hrszSource = new ol.source.TileWMS({
             url: MEPAR_WMS_URL,
             params: {
@@ -129,12 +131,13 @@ function addHRSZLayer(vonevData) {
             },
             projection: 'EPSG:23700',
             tileGrid: tileGrid,
-            serverType: 'geoserver'
+            serverType: 'geoserver',
+            hidpi: false
         });
 
-        // OL layer â€“ maxResolution: P[3] = 140 m/px (bundle: csak rĂ©szletes zoomnĂˇl lĂˇthatĂł)
+        // OL layer – maxResolution: P[3] = 140 m/px (bundle: csak részletes zoomnál látható)
         const hrszLayer = new ol.layer.Tile({
-            title: 'đź“Ť Helyrajzi szĂˇm (HRSZ)',
+            title: '📍 Helyrajzi szám (HRSZ)',
             source: hrszSource,
             maxResolution: 140,   // bundle: P[3].resolution = 140
             opacity: 1,
@@ -143,18 +146,18 @@ function addHRSZLayer(vonevData) {
         });
 
         AppState.map.addLayer(hrszLayer);
-        AppState.overlayMaps['đź“Ť Helyrajzi szĂˇm (HRSZ)'] = hrszLayer;
+        AppState.overlayMaps['📍 Helyrajzi szám (HRSZ)'] = hrszLayer;
 
-        // Layer control HTML frissĂ­tĂ©se (ha a setupLayerControl() mĂˇr lefutott)
+        // Layer control HTML frissítése (ha a setupLayerControl() már lefutott)
         if (typeof updateLayerControlUI === 'function') {
             updateLayerControlUI();
         }
 
-        Logger_Map.success(`âś“ HRSZ rĂ©teg hozzĂˇadva (VONEV:${vonev})`);
+        Logger_Map.success(`✓ HRSZ réteg hozzáadva (VONEV:${vonev})`);
         return hrszLayer;
 
     } catch (err) {
-        Logger_Map.error('HRSZ rĂ©teg hozzĂˇadĂˇsa sikertelen', err.message);
+        Logger_Map.error('HRSZ réteg hozzáadása sikertelen', err.message);
         return null;
     }
 }
