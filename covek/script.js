@@ -93,6 +93,7 @@ const AppState = {
     // Feature flagok
     autoZoomEnabled: false,
     isAutoZoomInProgress: false,
+    gpsFollowEnabled: false,
     
     // ===== GETTER/SETTER METHODS =====
     setMap(mapInstance) {
@@ -248,13 +249,14 @@ const EPSG23700_PROJ4 =
     ' +k_0=0.99993 +x_0=650000 +y_0=200000 +ellps=GRS67' +
     ' +towgs84=52.17,-71.82,-14.9,0,0,0,0 +units=m +no_defs';
 
-// Bundle P[] tömb – 18 felbontási szint (eredeti 15 + 3 extra közelröl)
+// Bundle P[] tömb – 21 felbontási szint (eredeti 15 + 6 extra közelről)
 const RESOLUTIONS = [
     1120, 560, 280, 140,
     55.99999999, 27.9999999999, 13.9999999999,
     5.6, 2.8, 1.4, 0.559999999999,
     0.28, 0.14, 0.056, 0.028,
-    0.014, 0.0056, 0.0028
+    0.014, 0.0056, 0.0028,
+    0.0014, 0.00056, 0.00028
 ];
 
 // S = startExtent (Magyarország EOV bbox)  ±200000 = mapExtent
@@ -289,10 +291,11 @@ function initMap() {
         });
 
         const osmGrayLayer = new ol.layer.Tile({
-            title: 'OSM szürke',
+            title: 'Műhold',
             source: new ol.source.XYZ({
-                url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}.png',
-                attributions: '© <a href="https://stadiamaps.com/">Stadia Maps</a>, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+                attributions: '© Google Satellite',
+                maxZoom: 21
             }),
             visible: false,
             zIndex: 0
@@ -424,7 +427,7 @@ function updateLayerControlUI() {
     if (osmLayer && osmGrayLayer) {
         [
             { layer: osmLayer, label: 'OpenStreetMap' },
-            { layer: osmGrayLayer, label: 'OSM szürke' }
+            { layer: osmGrayLayer, label: 'Műhold' }
         ].forEach(({ layer, label }) => {
             const id = 'lc-base-' + label.replace(/\s/g, '_');
             const row = document.createElement('label');
@@ -979,6 +982,10 @@ function startGPSTracking() {
             if (AppState.currentEOVY && AppState.currentEOVX) {
                 const eovCoord = [AppState.currentEOVY, AppState.currentEOVX];
                 if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(eovCoord);
+                // Követés mód: térkép közép folyamatosan a pozícióra kerül
+                if (AppState.gpsFollowEnabled) {
+                    AppState.map.getView().setCenter(eovCoord);
+                }
             }
 
             updateCoordinateDisplay();
@@ -995,19 +1002,21 @@ function startGPSTracking() {
 }
 
 
-// Térkép centrálása a saját GPS pozícióra
+// GPS követés be/ki kapcsolása
 function centerOnGPS() {
-    if (!AppState.currentEOVY || !AppState.currentEOVX) {
-        showStatus('Nincs elérhető GPS pozíció', 'error');
-        return;
+    AppState.gpsFollowEnabled = !AppState.gpsFollowEnabled;
+    const btn = document.getElementById('center-on-gps-btn');
+    if (btn) btn.classList.toggle('gps-follow-active', AppState.gpsFollowEnabled);
+
+    if (AppState.gpsFollowEnabled) {
+        // Azonnali ugrás, zoom nélkül
+        if (AppState.currentEOVY && AppState.currentEOVX) {
+            AppState.map.getView().animate({
+                center: [AppState.currentEOVY, AppState.currentEOVX],
+                duration: 300
+            });
+        }
     }
-    const eovCoord = [AppState.currentEOVY, AppState.currentEOVX];
-    const zoom = AppState.map.getView().getZoom() || 18;
-    AppState.map.getView().animate({
-        center: eovCoord,
-        zoom: Math.max(zoom, 18),
-        duration: 400
-    });
 }
 
 

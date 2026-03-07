@@ -77,6 +77,10 @@ body {
     background: rgba(40, 100, 190, 0.95);
     transform: scale(0.92);
 }
+#center-on-gps-btn.gps-follow-active {
+    background: rgba(30, 180, 80, 0.95);
+    box-shadow: 0 0 0 3px rgba(30, 180, 80, 0.4), 0 3px 10px rgba(0,0,0,0.4);
+}
 
 /* GPS pozíció overlay marker */
 #gps-overlay-marker {
