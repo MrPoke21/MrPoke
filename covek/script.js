@@ -66,6 +66,7 @@ const AppState = {
     // GPS
     gpsMarker: null,
     gpsWatchId: null,
+    gpsOverlay: null,
     
     // Térkép elemek - kiválasztás
     selectedLayer: null,
@@ -344,6 +345,16 @@ function initMap() {
 
         // Rétegváltó HTML control
         setupLayerControl();
+
+        // GPS Overlay marker (DOM-alapú, canvas-független – Chrome-on is működik)
+        const gpsMarkerEl = document.createElement('div');
+        gpsMarkerEl.id = 'gps-overlay-marker';
+        AppState.gpsOverlay = new ol.Overlay({
+            element: gpsMarkerEl,
+            positioning: 'center-center',
+            stopEvent: false
+        });
+        AppState.map.addOverlay(AppState.gpsOverlay);
 
         Logger_Map.success('OpenLayers map inicializálva (EPSG:23700 EOV)');
 
@@ -958,42 +969,16 @@ function startGPSTracking() {
             // GPS marker OL-ban – csak ha NEM screenCenter forrás (ott a + jelölő mutatja a pozíciót)
             const activeSource = document.getElementById('gpsSource')?.value;
             if (activeSource === CONSTANTS.COORD_SYSTEMS.SCREEN_CENTER) {
-                // screenCenter módban a GPS kék kört elrejtjük, nehogy régi GPS pozícióra mutasson
-                if (AppState.gpsMarker) {
-                    AppState.gpsVectorSource.removeFeature(AppState.gpsMarker);
-                    AppState.gpsMarker = null;
-                }
+                // screenCenter módban a GPS markert elrejtjük
+                if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(undefined);
                 updateCoordinateDisplay();
                 return;
             }
 
-            // GPS marker OL-ban – EOV koordinátákat használunk (pontosabb, transformer-en át)
+            // GPS marker – DOM Overlay (canvas-mentes, Chrome-kompatibilis)
             if (AppState.currentEOVY && AppState.currentEOVX) {
                 const eovCoord = [AppState.currentEOVY, AppState.currentEOVX];
-
-                if (!AppState.gpsMarker) {
-                    AppState.gpsMarker = new ol.Feature({
-                        geometry: new ol.geom.Point(eovCoord)
-                    });
-                    AppState.gpsMarker.setStyle([
-                        new ol.style.Style({
-                            image: new ol.style.Circle({
-                                radius: 12,
-                                fill: new ol.style.Fill({ color: 'rgba(74,144,226,0.8)' }),
-                                stroke: new ol.style.Stroke({ color: 'white', width: 2 })
-                            })
-                        }),
-                        new ol.style.Style({
-                            image: new ol.style.Circle({
-                                radius: 4,
-                                fill: new ol.style.Fill({ color: 'white' })
-                            })
-                        })
-                    ]);
-                    AppState.gpsVectorSource.addFeature(AppState.gpsMarker);
-                } else {
-                    AppState.gpsMarker.getGeometry().setCoordinates(eovCoord);
-                }
+                if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(eovCoord);
             }
 
             updateCoordinateDisplay();
@@ -1033,6 +1018,7 @@ function stopGPSTracking() {
         AppState.gpsWatchId = null;
         Logger_GPS.info('GPS tracking leállítva');
     }
+    if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(undefined);
 }
 
 // parseKML, parseKMLCoordinates, shapefile feltöltés handler, showStatus -> file-handler.js
