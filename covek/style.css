@@ -51,6 +51,33 @@ body {
     transform: translateX(-50%);
 }
 
+/* GPS centrálás gomb */
+#center-on-gps-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 16px;
+    z-index: 999;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(74, 144, 226, 0.9);
+    color: white;
+    border: 2px solid white;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+    transition: background 0.2s, transform 0.15s;
+    touch-action: manipulation;
+}
+#center-on-gps-btn:active {
+    background: rgba(40, 100, 190, 0.95);
+    transform: scale(0.92);
+}
+
 /* Koordináta panel a térképen */
 .coord-panel {
     position: absolute;

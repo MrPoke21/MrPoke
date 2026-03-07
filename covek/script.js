@@ -975,15 +975,21 @@ function startGPSTracking() {
                     AppState.gpsMarker = new ol.Feature({
                         geometry: new ol.geom.Point(eovCoord)
                     });
-                    AppState.gpsMarker.setStyle(new ol.style.Style({
-                        image: new ol.style.Icon({
-                            src: 'data:image/svg+xml,' + encodeURIComponent(
-                                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="8" fill="rgba(74,144,226,0.8)"/><circle cx="12" cy="12" r="3" fill="white"/></svg>'
-                            ),
-                            width: 32, height: 32,
-                            anchor: [0.5, 0.5], anchorXUnits: 'fraction', anchorYUnits: 'fraction'
+                    AppState.gpsMarker.setStyle([
+                        new ol.style.Style({
+                            image: new ol.style.Circle({
+                                radius: 12,
+                                fill: new ol.style.Fill({ color: 'rgba(74,144,226,0.8)' }),
+                                stroke: new ol.style.Stroke({ color: 'white', width: 2 })
+                            })
+                        }),
+                        new ol.style.Style({
+                            image: new ol.style.Circle({
+                                radius: 4,
+                                fill: new ol.style.Fill({ color: 'white' })
+                            })
                         })
-                    }));
+                    ]);
                     AppState.gpsVectorSource.addFeature(AppState.gpsMarker);
                 } else {
                     AppState.gpsMarker.getGeometry().setCoordinates(eovCoord);
@@ -1001,6 +1007,22 @@ function startGPSTracking() {
             maximumAge: CONSTANTS.GPS.MAXIMUM_AGE
         }
     );
+}
+
+
+// Térkép centrálása a saját GPS pozícióra
+function centerOnGPS() {
+    if (!AppState.currentEOVY || !AppState.currentEOVX) {
+        showStatus('Nincs elérhető GPS pozíció', 'error');
+        return;
+    }
+    const eovCoord = [AppState.currentEOVY, AppState.currentEOVX];
+    const zoom = AppState.map.getView().getZoom() || 18;
+    AppState.map.getView().animate({
+        center: eovCoord,
+        zoom: Math.max(zoom, 18),
+        duration: 400
+    });
 }
 
 
