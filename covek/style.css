@@ -54,7 +54,7 @@ body {
 /* GPS centrálás gomb */
 #center-on-gps-btn {
     position: absolute;
-    bottom: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px) + 56px);
     right: 16px;
     z-index: 999;
     width: 48px;
