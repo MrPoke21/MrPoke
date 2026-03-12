@@ -68,6 +68,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <!-- GPS centrálás gomb -->
             <button id="center-on-gps-btn" onclick="centerOnGPS()" title="Követés be/ki">&#x1F4CD;</button>
 
+            <!-- GPS mérési pontosság jelvény (jobb felső sarok) -->
+            <div id="gps-accuracy-badge" class="gps-accuracy-badge">📡 —</div>
+
             <!-- Koordináta panel a térképen -->
             <div class="coord-panel">
                 <div class="coord-row">
@@ -194,7 +197,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div class="section">
                 <h3>🛰️ Grid státusz</h3>
                 <div id="gridStatus" style="font-size: 13px; line-height: 1.6;">
-                    <div><strong>Pontosság:</strong> <span id="gridAccuracy">—</span></div>
+                    <div><strong>GPS mérési pontosság:</strong> <span id="gpsAccuracyValue">—</span></div>
+                    <div><strong>Konverziós pontosság:</strong> <span id="gridAccuracy">—</span></div>
                     <div><strong>Forrás:</strong> <span id="gridSource">—</span></div>
                 </div>
             </div>

@@ -66,6 +66,7 @@ const AppState = {
     gpsMarker: null,
     gpsWatchId: null,
     gpsOverlay: null,
+    gpsAccuracy: null,          // position.coords.accuracy [m] – az eszköz által jelentett vízszintes pontosság
     
     // Térkép elemek - kiválasztás
     selectedLayer: null,
@@ -965,6 +966,10 @@ function startGPSTracking() {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
 
+            // Valós mérési pontosság (mock location esetén is átkerül az RTK eszköztől)
+            AppState.gpsAccuracy = position.coords.accuracy ?? null;
+            updateGpsAccuracyDisplay();
+
             // Koordináta konverzió (forrás alapján)
             convertFromSourceCoordinates(lat, lon);
 
@@ -1027,6 +1032,41 @@ function stopGPSTracking() {
         Logger_GPS.info('GPS tracking leállítva');
     }
     if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(undefined);
+    AppState.gpsAccuracy = null;
+    updateGpsAccuracyDisplay();
+}
+
+function updateGpsAccuracyDisplay() {
+    // Oldalpanel érték
+    const elPanel = document.getElementById('gpsAccuracyValue');
+    // Jobb felső sarok badge
+    const badge = document.getElementById('gps-accuracy-badge');
+
+    if (AppState.gpsAccuracy === null) {
+        if (elPanel) elPanel.textContent = '—';
+        if (badge) {
+            badge.textContent = '📡 —';
+            badge.className = 'gps-accuracy-badge';
+        }
+        return;
+    }
+
+    // RTK fix esetén ~0.01-0.05 m, DGNSS ~0.3-1 m, autonóm ~3-10 m
+    const m = AppState.gpsAccuracy;
+    const label = m < 1 ? `±${(m * 100).toFixed(0)} cm` : `±${m.toFixed(1)} m`;
+
+    if (elPanel) elPanel.textContent = label;
+
+    if (badge) {
+        badge.textContent = `📡 ${label}`;
+        if (m > 1.5) {
+            badge.className = 'gps-accuracy-badge acc-red';
+        } else if (m > 0.1) {
+            badge.className = 'gps-accuracy-badge acc-yellow';
+        } else {
+            badge.className = 'gps-accuracy-badge acc-green';
+        }
+    }
 }
 
 // parseKML, parseKMLCoordinates, shapefile feltöltés handler, showStatus -> file-handler.js
