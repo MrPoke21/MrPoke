@@ -44,6 +44,7 @@ const VONEV_MAP = {
     2023: { vonev: 2023, tolda: "2023-03-01", igdat: "2024-02-29" },
     2024: { vonev: 2024, tolda: "2024-03-01", igdat: "2025-02-28" },
     2025: { vonev: 2025, tolda: "2025-03-01", igdat: "2026-02-28" },
+    2026: { vonev: 2026, tolda: "2026-03-01", igdat: "2027-02-28" },
 };
 
 /**
@@ -141,9 +142,10 @@ function addHRSZLayer(vonevData) {
             source: hrszSource,
             maxResolution: 140,   // bundle: P[3].resolution = 140
             opacity: 1,
-            visible: true,
+            visible: false,       // Szerver oldali Altcha blokkolás miatt letiltva
             zIndex: 100
         });
+        hrszLayer.set('unavailable', true); // Jelenleg nem elérhető – CAPTCHA letiltás
 
         AppState.map.addLayer(hrszLayer);
         AppState.overlayMaps['📍 Helyrajzi szám (HRSZ)'] = hrszLayer;

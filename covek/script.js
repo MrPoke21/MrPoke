@@ -469,13 +469,16 @@ function updateLayerControlUI() {
     overlayDiv.innerHTML = '';
     Object.entries(AppState.overlayMaps || {}).forEach(([label, layer]) => {
         const id = 'lc-overlay-' + label.replace(/[^a-zA-Z0-9]/g, '_');
+        const unavailable = layer.get('unavailable') === true;
         const row = document.createElement('label');
-        row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:2px 0;cursor:pointer;';
-        row.innerHTML = `<input type="checkbox" id="${id}" style="cursor:pointer;">
-                         <span>${label}</span>`;
-        const cb = row.querySelector('input');
-        cb.checked = layer.getVisible();
-        cb.addEventListener('change', () => layer.setVisible(cb.checked));
+        row.style.cssText = `display:flex;align-items:center;gap:6px;margin:2px 0;${unavailable ? 'cursor:not-allowed;opacity:0.45;' : 'cursor:pointer;'}`;
+        row.innerHTML = `<input type="checkbox" id="${id}" ${unavailable ? 'disabled' : ''} style="${unavailable ? 'cursor:not-allowed;' : 'cursor:pointer;'}">
+                         <span>${label}${unavailable ? ' <em style="font-size:0.8em;font-style:italic">(Jelenleg nem elérhető)</em>' : ''}</span>`;
+        if (!unavailable) {
+            const cb = row.querySelector('input');
+            cb.checked = layer.getVisible();
+            cb.addEventListener('change', () => layer.setVisible(cb.checked));
+        }
         overlayDiv.appendChild(row);
     });
 }
