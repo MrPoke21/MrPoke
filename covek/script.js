@@ -2,7 +2,6 @@
 const CONSTANTS = {
     // Koordináta rendszerek
     COORD_SYSTEMS: {
-        WGS84: 'wgs84',
         ETRF2000: 'etrf2000',
         EOV: 'eov',
         SCREEN_CENTER: 'screenCenter',
@@ -932,7 +931,7 @@ function updateGridStatusDisplay() {
 // Csak akkor frissít, ha "Térkép középpontja" van kiválasztva
 function updateMapCenter() {
     const gpsSourceElement = document.getElementById('gpsSource');
-    const source = gpsSourceElement ? gpsSourceElement.value : CONSTANTS.COORD_SYSTEMS.WGS84;
+    const source = gpsSourceElement ? gpsSourceElement.value : CONSTANTS.COORD_SYSTEMS.RTK;
     
     // Csak akkor frissítünk, ha a Térkép középpontja van kiválasztva
     if (source === CONSTANTS.COORD_SYSTEMS.SCREEN_CENTER) {

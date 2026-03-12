@@ -207,7 +207,7 @@ function convertFromSourceCoordinates(x, y) {
     } else {
         // A gpsSource selectből olvassuk ki a forrást
         const gpsSourceElement = document.getElementById('gpsSource');
-        source = gpsSourceElement ? gpsSourceElement.value : CONSTANTS.COORD_SYSTEMS.WGS84;
+        source = gpsSourceElement ? gpsSourceElement.value : CONSTANTS.COORD_SYSTEMS.RTK;
         
         // gpsSource értékek mapping
         if (source === CONSTANTS.COORD_SYSTEMS.RTK) {
@@ -217,13 +217,6 @@ function convertFromSourceCoordinates(x, y) {
     
     try {
         switch(source) {
-            case CONSTANTS.COORD_SYSTEMS.WGS84:
-                // WGS84 (lat, lon) → ETRF2000
-                const etrf2000_from_wgs84 = AppState.transformer.wgs84_2etrf2000(x, y);
-                etrf2000Lat = etrf2000_from_wgs84.lat;
-                etrf2000Lon = etrf2000_from_wgs84.lon;
-                break;
-                
             case CONSTANTS.COORD_SYSTEMS.ETRF2000:
                 // ETRF2000 már a megfelelő formátumban van
                 etrf2000Lat = x;

@@ -176,7 +176,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     </button>
                 </label>
                 <select id="gpsSource">
-                    <option value="wgs84">WGS84 GPS</option>
                     <option value="rtk">ETRF2000 RTK</option>
                     <option value="screenCenter">Térkép középpontja</option>
                 </select>
@@ -345,12 +344,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 
                 <p><strong>📡 Forrás típusok:</strong></p>
                 <ul>
-                    <li><strong>ETRF2000 RTK</strong> – Valós idejű kinematikus GNSS, fix megoldás. <strong>RTK fix esetén ezt kell választani.</strong> Centiméteres pontosság Magyarország felett.</li>
-                    <li><strong>WGS84 GPS</strong> – Standard vagy hálózati korrekciós DGNSS, PPP stb. <strong>Ha más korrekciós módszert használsz (D*GNSS, PPP, stb.), ezt válaszd.</strong> Deciméteres pontosság.</li>
+                    <li><strong>ETRF2000 RTK</strong> – Valós idejű kinematikus GNSS, fix megoldás. Az RTK rendszerek bázis vetülete az ETRF2000, ezért az összes RTK-korrekcióval kapott koordináta ebbe a rendszerbe érkezik. <strong>RTK fix esetén ezt kell választani.</strong> Centiméteres pontosság Magyarország felett.</li>
                     <li><strong>Térkép középpontja</strong> – A térképen megjelenített terület középpontja. <strong>Tesztelésre és tanulásra</strong> használható, ha nincs valós GPS adatod.</li>
                 </ul>
                 
-                <p><strong>💡 Tipp:</strong> Ha RTK vevővel dolgozol, az ETRF2000 RTK az ajánlott. Egyéb esetekben a WGS84 GPS lehetőség felel meg a legtöbb felhasználási esetnek.</p>
+                <p><strong>💡 Tipp:</strong> Az ETRF2000 RTK a javasolt forrás, mivel a magyarországi GNSS hálózatok (pl. GNSSnet.hu, VITEL) ETRF2000 rendszerben adják ki a korrekciós adatokat.</p>
             </div>
             <div class="modal-footer">
                 <button class="btn-primary" id="sourceModalOK" type="button">Rendben</button>
