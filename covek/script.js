@@ -232,6 +232,10 @@ function updateCoordinateDisplay() {
     if (typeof updateMovingCorner === 'function' && typeof MoveState !== 'undefined' && MoveState.active) {
         updateMovingCorner();
     }
+    // Rajzolás mód: gumiló vonal és távolság folyamatos frissítése
+    if (typeof _updateDrawLiveLine === 'function' && typeof DrawState !== 'undefined' && DrawState.active) {
+        _updateDrawLiveLine();
+    }
 }
 
 // Egyeteme koordináta konverzió függvénye a mathematics.js-ből betöltve
@@ -649,12 +653,8 @@ function deselectAll() {
     // Távolságvizualizáció törlése
     clearDistanceVisualization();
     
-    // Mérési és poligon panelok elrejtése
-    const distanceInfoPanel = DOMCache.get('distance-info-panel');
+    // Poligon panel elrejtése
     const polygonInfoPanel = DOMCache.get('polygon-info-panel');
-    if (distanceInfoPanel) {
-        distanceInfoPanel.style.display = 'none';
-    }
     if (polygonInfoPanel) {
         polygonInfoPanel.style.display = 'none';
     }
@@ -680,8 +680,6 @@ function updateDistanceLine(skipAutoZoom = false) {
     // Ha nincs aktuális pozíció
     if (!AppState.currentEOVX || !AppState.currentEOVY) {
         clearDistanceVisualization();
-        const distanceInfoPanel = DOMCache.get('distance-info-panel');
-        if (distanceInfoPanel) distanceInfoPanel.style.display = 'none';
         return;
     }
 
@@ -692,13 +690,9 @@ function updateDistanceLine(skipAutoZoom = false) {
     let targetOL = null;           // OL [easting, northing]
     let projectionOL = null;       // merőleges vetület OL koordinátája
     let distanceResult = null;
-    const distanceInfoPanel = DOMCache.get('distance-info-panel');
-    const distanceTextElement = DOMCache.get('distance-text');
 
     window.perpendicularPerpOL = null;
     window.perpendicularPerpDistance = null;
-
-    if (distanceInfoPanel) distanceInfoPanel.style.display = 'none';
 
     // Sarokpont kiválasztva
     if (AppState.selectedPointEOV.x && AppState.selectedPointEOV.y) {
@@ -810,15 +804,22 @@ function updateDistanceLine(skipAutoZoom = false) {
         AppState.distanceVectorSource.addFeature(greenLine);
     }
 
-    // Távolság megjelenítése az alsó panelben
-    let fullText = formatDistance(distance);
-    if (window.perpendicularPerpDistance) {
-        fullText = `${formatDistance(distance)} (vég)<br>${formatDistance(window.perpendicularPerpDistance)} (⊥)`;
-    }
-    if (distanceInfoPanel && distanceTextElement) {
-        distanceTextElement.innerHTML = fullText;
-        distanceInfoPanel.style.display = 'block';
-    }
+    // Távolság felirat az aktuális pozíció fölé (térkép layer)
+    const labelText = window.perpendicularPerpDistance
+        ? `${formatDistance(distance)} (vég)\n${formatDistance(window.perpendicularPerpDistance)} (⊥)`
+        : formatDistance(distance);
+    const posLabel = new ol.Feature({ geometry: new ol.geom.Point([...currentOL]) });
+    posLabel.setStyle(new ol.style.Style({
+        text: new ol.style.Text({
+            text: labelText,
+            offsetY: -18,
+            font: 'bold 13px sans-serif',
+            fill: new ol.style.Fill({ color: CONSTANTS.COLORS.PRIMARY_RED }),
+            stroke: new ol.style.Stroke({ color: '#000', width: 3 }),
+            textAlign: 'center'
+        })
+    }));
+    AppState.distanceVectorSource.addFeature(posLabel);
 
     if (!skipAutoZoom) performAutoZoom();
 }
@@ -872,16 +873,16 @@ function performAutoZoom() {
 function displayPolygonInfo(eovCorners, properties) {
     const polygonInfoPanel = DOMCache.get('polygon-info-panel');
     const polygonArea = DOMCache.get('polygon-area');
+    const polygonPerimeter = DOMCache.get('polygon-perimeter');
     const polygonProperties = DOMCache.get('polygon-properties');
     
     if (!polygonInfoPanel) return;
     
-    // Terület számítása - biztonságos error handling-gel
+    // Terület és kerület számítása
     let areaText = '—';
+    let perimeterText = '—';
     try {
-        // Validáció: eovCorners legyen array
         if (Array.isArray(eovCorners) && eovCorners.length >= 3) {
-            // Szűrés: csak valid elemek
             const validCorners = eovCorners.filter(corner => {
                 if (!corner) return false;
                 if (Array.isArray(corner)) return corner.length >= 2 && isFinite(corner[0]) && isFinite(corner[1]);
@@ -892,6 +893,8 @@ function displayPolygonInfo(eovCorners, properties) {
             if (validCorners.length >= 3) {
                 const area = calculatePolygonArea(validCorners);
                 areaText = formatArea(area);
+                const perimeter = calculatePolygonPerimeter(validCorners);
+                perimeterText = formatDistance(perimeter);
             } else {
                 Logger_Map.warn('Nem elég valid EOV sarokpont a terület számításához', { total: eovCorners.length, valid: validCorners.length });
             }
@@ -902,6 +905,7 @@ function displayPolygonInfo(eovCorners, properties) {
         Logger_Map.error('Poligon terület számítás sikertelen', err);
     }
     polygonArea.textContent = areaText;
+    if (polygonPerimeter) polygonPerimeter.textContent = perimeterText;
     
     // Properties megjelenítése
     let propertiesHTML = '';

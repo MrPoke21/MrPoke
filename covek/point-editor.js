@@ -397,7 +397,10 @@ const DrawState = {
     olPoints: [],    // [[easting, northing], ...]
     eovPoints: [],   // [{y: easting, x: northing}, ...]
     previewSource: null,
-    previewLayer: null
+    previewLayer: null,
+    lastSegmentDist: null,  // m, legutóbbi szegmens hossza
+    liveSource: null,       // folyamatosan frissülő gumiló vonal + távolság label
+    liveLayer: null
 };
 
 /** Szülő shapeFileLayer létrehozása ha még nem létezik */
@@ -439,6 +442,67 @@ function _ensureDrawPreviewLayer() {
         zIndex: 300
     });
     AppState.map.addLayer(DrawState.previewLayer);
+}
+
+/** "Gumiló" vonal réteg (folyamatosan frissül az aktuális pozícióra) */
+function _ensureDrawLiveLayer() {
+    if (DrawState.liveSource) return;
+    DrawState.liveSource = new ol.source.Vector();
+    DrawState.liveLayer = new ol.layer.Vector({
+        source: DrawState.liveSource,
+        zIndex: 301
+    });
+    AppState.map.addLayer(DrawState.liveLayer);
+}
+
+/**
+ * Frissíti a gumiló vonalat és a távolság felirati elemet az aktuális pozíció alapján.
+ * Mindig az utolsó lerakott pont és az aktuális EOV pozíció között.
+ */
+function _updateDrawLiveLine() {
+    if (!DrawState.active) return;
+    _ensureDrawLiveLayer();
+    DrawState.liveSource.clear();
+
+    const n = DrawState.olPoints.length;
+    if (n === 0) return;
+    if (!AppState.currentEOVY || !AppState.currentEOVX) return;
+
+    const lastPt  = DrawState.olPoints[n - 1];          // [easting, northing]
+    const curPt   = [AppState.currentEOVY, AppState.currentEOVX];
+    const lastEov = DrawState.eovPoints[n - 1];          // {y, x}
+    const dist    = Math.hypot(curPt[0] - lastPt[0], curPt[1] - lastPt[1]);
+
+    // Gumiló vonal
+    const line = new ol.Feature({
+        geometry: new ol.geom.LineString([lastPt, curPt])
+    });
+    line.setStyle(new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: '#ffeb3b', width: 2, lineDash: [8, 5] })
+    }));
+    DrawState.liveSource.addFeature(line);
+
+    // Távolság felirat az aktuális pozíció fölé
+    const label = new ol.Feature({ geometry: new ol.geom.Point([...curPt]) });
+    label.setStyle(new ol.style.Style({
+        image: new ol.style.Circle({
+            radius: 5,
+            fill: new ol.style.Fill({ color: '#ffeb3b' }),
+            stroke: new ol.style.Stroke({ color: '#333', width: 1.5 })
+        }),
+        text: new ol.style.Text({
+            text: formatDistance(dist),
+            offsetY: -18,
+            font: 'bold 13px sans-serif',
+            fill: new ol.style.Fill({ color: '#ffeb3b' }),
+            stroke: new ol.style.Stroke({ color: '#000', width: 3 })
+        })
+    }));
+    DrawState.liveSource.addFeature(label);
+
+    // Státuszsort is frissítjük a live távolsággal
+    DrawState.lastSegmentDist = dist;
+    _updateDrawStatus();
 }
 
 /** Rajzolás állapot megjelenítése a preview rétegen */
@@ -531,6 +595,17 @@ function addCurrentPositionPoint() {
     DrawState.olPoints.push([...olCoord]);
     DrawState.eovPoints.push(eovCoord);
 
+    // Távolság az előző ponttól
+    const n = DrawState.eovPoints.length;
+    if (n >= 2) {
+        const prev = DrawState.eovPoints[n - 2];
+        const curr = DrawState.eovPoints[n - 1];
+        const dist = Math.hypot(curr.y - prev.y, curr.x - prev.x);
+        DrawState.lastSegmentDist = dist;
+    } else {
+        DrawState.lastSegmentDist = null;
+    }
+
     _updateDrawPreview();
     _updateDrawStatus();
     Logger_Map.info('Rajzolás: pont hozzáadva (pillanatnyi pozíció)', { olCoord, eovCoord, db: DrawState.olPoints.length });
@@ -541,6 +616,15 @@ function undoDrawPoint() {
     if (DrawState.olPoints.length === 0) return;
     DrawState.olPoints.pop();
     DrawState.eovPoints.pop();
+    // Visszavonás után újraszámítjuk az előző szegmens hosszát
+    const n = DrawState.eovPoints.length;
+    if (n >= 2) {
+        const prev = DrawState.eovPoints[n - 2];
+        const curr = DrawState.eovPoints[n - 1];
+        DrawState.lastSegmentDist = Math.hypot(curr.y - prev.y, curr.x - prev.x);
+    } else {
+        DrawState.lastSegmentDist = null;
+    }
     _updateDrawPreview();
     _updateDrawStatus();
     Logger_Map.info('Rajzolás: visszavonás', { maradó: DrawState.olPoints.length });
@@ -616,7 +700,9 @@ function _exitDrawMode() {
     DrawState.active = false;
     DrawState.olPoints = [];
     DrawState.eovPoints = [];
+    DrawState.lastSegmentDist = null;
     if (DrawState.previewSource) DrawState.previewSource.clear();
+    if (DrawState.liveSource) DrawState.liveSource.clear();
     document.getElementById('map').classList.remove('draw-active');
     _hideDrawBar();
 }
@@ -626,13 +712,18 @@ function _updateDrawStatus() {
     const el = document.getElementById('draw-status-text');
     if (!el) return;
     const n = DrawState.olPoints.length;
+    let txt;
     if (n === 0) {
-        el.textContent = 'Nyomd a "Pont hozzáadása" gombot az első pont lehelyezéséhez';
+        txt = 'Nyomd a „Pont hozzáadása” gombot az első pont lehelyezéséhez';
     } else if (n < 3) {
-        el.textContent = `${n} pont – még ${3 - n} kell a záráshoz`;
+        txt = `${n} pont – még ${3 - n} kell a záráshoz`;
     } else {
-        el.textContent = `${n} pont – "Kész" gombbal zárható`;
+        txt = `${n} pont – „Kész” gombbal zárható`;
     }
+    if (DrawState.lastSegmentDist !== null) {
+        txt += `  |  ⇐ ${formatDistance(DrawState.lastSegmentDist)}`;
+    }
+    el.textContent = txt;
 
     const finishBtn = document.getElementById('draw-finish-btn');
     if (finishBtn) finishBtn.disabled = n < 3;

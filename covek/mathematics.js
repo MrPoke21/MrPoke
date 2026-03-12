@@ -95,6 +95,22 @@ function formatArea(areaInSquaremeters) {
     }
 }
 
+function calculatePolygonPerimeter(eovCorners) {
+    if (!eovCorners || eovCorners.length < 2) return 0;
+    let perimeter = 0;
+    const pts = eovCorners;
+    for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        let ax, ay, bx, by;
+        if (Array.isArray(a)) { ax = a[0]; ay = a[1]; } else { ax = a.x; ay = a.y; }
+        if (Array.isArray(b)) { bx = b[0]; by = b[1]; } else { bx = b.x; by = b.y; }
+        if (!isFinite(ax) || !isFinite(ay) || !isFinite(bx) || !isFinite(by)) continue;
+        perimeter += Math.hypot(bx - ax, by - ay);
+    }
+    return perimeter;
+}
+
 function calculatePointToLineDistance(pointEOV, lineStartEOV, lineEndEOV) {
     const px = pointEOV.x;
     const py = pointEOV.y;
