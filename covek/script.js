@@ -256,7 +256,7 @@ const RESOLUTIONS = [
     5.6, 2.8, 1.4, 0.559999999999,
     0.28, 0.14, 0.056, 0.028,
     0.014, 0.0056, 0.0028,
-    0.0014, 0.00056, 0.00028
+    0.0014
 ];
 
 // S = startExtent (Magyarország EOV bbox)  ±200000 = mapExtent
@@ -348,6 +348,7 @@ function initMap() {
 
         // Rétegváltó HTML control
         setupLayerControl();
+        updateScaleBar();
 
         // GPS Overlay marker (DOM-alapú, canvas-független – Chrome-on is működik)
         const gpsMarkerEl = document.createElement('div');
@@ -369,11 +370,13 @@ function initMap() {
                 const isSelected = feature === AppState.selectedCornerMarker;
                 feature.setStyle(getCornerMarkerStyle(isSelected ? 'red' : 'yellow', newSize));
             });
+            updateScaleBar();
         });
 
         // Térkép mozgáskor középpont marker frissítése
         AppState.map.on('moveend', () => {
             updateMapCenter();
+            updateScaleBar();
         });
 
         // Kattintás kezelés – feature kiválasztás
@@ -386,30 +389,44 @@ function initMap() {
 }
 
 /**
+ * Vonalas méretarány frissítése.
+ * Az EOV vetület m-es egységű → resolution [m/px] közvetlenül használható.
+ * Kerek értéket (1/2/5 × 10^n) keres, max 200 px szélességig.
+ */
+function updateScaleBar() {
+    const line  = document.getElementById('scale-bar-line');
+    const label = document.getElementById('scale-bar-label');
+    if (!line || !label || !AppState.map) return;
+
+    const res = AppState.map.getView().getResolution(); // m/px
+    if (!res || res <= 0) return;
+
+    // Célszélesség ~100 px, kerek méterérték (1/2/5 × 10^n)
+    const targetPx = 100;
+    const rawM = res * targetPx;
+    const exp  = Math.floor(Math.log10(rawM));
+    const base = Math.pow(10, exp);
+    let niceM;
+    const ratio = rawM / base;
+    if      (ratio < 1.5) niceM = base;
+    else if (ratio < 3.5) niceM = 2 * base;
+    else if (ratio < 7.5) niceM = 5 * base;
+    else                  niceM = 10 * base;
+
+    const px = Math.round(niceM / res);
+
+    line.style.width = px + 'px';
+    label.textContent = niceM >= 1000 ? `${niceM / 1000} km` : `${niceM} m`;
+}
+
+/**
  * Rétegváltó HTML control az OL térkép felett.
  * Mimic-eli a Leaflet L.control.layers() megjelenését.
  */
 function setupLayerControl() {
     if (!AppState.map) return;
 
-    const container = document.createElement('div');
-    container.id = 'layer-control';
-    container.style.cssText =
-        'position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.9);' +
-        'padding:8px 10px;border-radius:4px;font-size:13px;z-index:1000;' +
-        'box-shadow:0 1px 5px rgba(0,0,0,0.4);min-width:140px;cursor:default;' +
-        'user-select:none;';
-
-    container.innerHTML = `
-        <div style="font-weight:bold;margin-bottom:6px;font-size:12px;color:#555;">Rétegek</div>
-        <div id="lc-base-layers"></div>
-        <hr style="margin:6px 0;border:none;border-top:1px solid #ddd;">
-        <div id="lc-overlay-layers"></div>
-    `;
-
-    // Rétegváltó hozzáadása a map konténerhez
-    AppState.map.getTargetElement().querySelector('.ol-viewport').appendChild(container);
-
+    // A rétegválasztó a sidebarban van (lc-base-layers, lc-overlay-layers már az index.html-ben)
     updateLayerControlUI();
 }
 

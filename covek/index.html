@@ -122,6 +122,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div id="distance-text">—</div>
         </div>
 
+        <!-- Vonalas méretarány -->
+        <div id="scale-bar" class="scale-bar">
+            <div id="scale-bar-line" class="scale-bar-line"></div>
+            <div id="scale-bar-label" class="scale-bar-label">...</div>
+        </div>
+
         <!-- Poligon információs panel az alján -->
         <div id="polygon-info-panel" class="polygon-info-panel" hidden>
             <div class="polygon-info-header">
@@ -184,13 +190,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </select>
             </div>
 
-            <!-- Auto zoom -->
+            <!-- Megjelenítés / rétegek -->
             <div class="section">
                 <h3>🔍 Megjelenítés</h3>
                 <label style="display: flex; align-items: center; cursor: pointer;">
                     <input type="checkbox" id="autoZoomEnable" style="margin-right: 8px;">
                     <span>Auto zoom műholdnézethez</span>
                 </label>
+            </div>
+
+            <!-- Rétegek -->
+            <div class="section">
+                <h3>🗂️ Rétegek</h3>
+                <div id="lc-base-layers"></div>
+                <hr style="margin:6px 0;border:none;border-top:1px solid #eee;">
+                <div id="lc-overlay-layers"></div>
             </div>
 
             <!-- Grid Status -->
