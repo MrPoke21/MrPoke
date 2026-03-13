@@ -68,6 +68,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <!-- GPS centrálás gomb -->
             <button id="center-on-gps-btn" onclick="centerOnGPS()" title="Követés be/ki">&#x1F4CD;</button>
 
+            <!-- GPS engedély banner -->
+            <div id="gps-permission-banner" class="gps-permission-banner" style="display:none">
+                <span class="gps-permission-icon">📍</span>
+                <span class="gps-permission-text">A helymeghatározás le van tiltva. Engedélyezd a böngésző címsávában vagy a beállításokban, majd töltsd újra az oldalt.</span>
+                <button class="gps-permission-close" onclick="hideGpsPermissionBanner()" title="Bezárás">✕</button>
+            </div>
+
             <!-- GPS mérési pontosság jelvény (jobb felső sarok) -->
             <div id="gps-accuracy-badge" class="gps-accuracy-badge">📡 —</div>
 

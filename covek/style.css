@@ -159,6 +159,47 @@ body {
 .gps-accuracy-badge.acc-red    { background: rgba(200, 30, 30, 0.88); }
 .gps-accuracy-badge.acc-yellow { background: rgba(180, 140, 0, 0.88); }
 .gps-accuracy-badge.acc-green  { background: rgba(30, 150, 60, 0.88); }
+.gps-accuracy-badge.acc-denied { background: rgba(100, 50, 0, 0.88); }
+
+/* GPS engedély banner */
+.gps-permission-banner {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(40, 20, 0, 0.93);
+    color: #ffd27a;
+    border: 1px solid rgba(255, 180, 60, 0.55);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    max-width: 90vw;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+}
+.gps-permission-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.gps-permission-text {
+    flex: 1;
+    line-height: 1.4;
+}
+.gps-permission-close {
+    background: none;
+    border: none;
+    color: #ffd27a;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+.gps-permission-close:hover { opacity: 1; }
 
 /* Koordináta panel a térképen */
 .coord-panel {

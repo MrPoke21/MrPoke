@@ -978,55 +978,133 @@ function updateScreenCenterMarker(source) {
     el.style.display = (source === CONSTANTS.COORD_SYSTEMS.SCREEN_CENTER) ? 'block' : 'none';
 }
 
+// GPS engedély banner megjelenítése / elrejtése
+function showGpsPermissionBanner() {
+    const badge = document.getElementById('gps-accuracy-badge');
+    if (badge) {
+        badge.textContent = '🔒 GPS tiltva';
+        badge.className = 'gps-accuracy-badge acc-denied';
+    }
+    const banner = document.getElementById('gps-permission-banner');
+    if (banner) banner.style.display = 'flex';
+}
+
+function hideGpsPermissionBanner() {
+    const banner = document.getElementById('gps-permission-banner');
+    if (banner) banner.style.display = 'none';
+}
+
 // GPS nyomkövetés
 function startGPSTracking() {
     if (!navigator.geolocation) {
-        showStatus('Geolocation not available', 'error');
+        Logger_GPS.warn('Geolocation API nem elérhető');
+        showGpsPermissionBanner();
         return;
     }
 
-    AppState.gpsWatchId = navigator.geolocation.watchPosition(
-        (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
+    const watchOptions = {
+        enableHighAccuracy: CONSTANTS.GPS.ENABLE_HIGH_ACCURACY,
+        maximumAge: CONSTANTS.GPS.MAXIMUM_AGE
+    };
 
-            // Valós mérési pontosság (mock location esetén is átkerül az RTK eszköztől)
-            AppState.gpsAccuracy = position.coords.accuracy ?? null;
-            updateGpsAccuracyDisplay();
+    const onPosition = (position) => {
+        hideGpsPermissionBanner();
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
 
-            // Koordináta konverzió (forrás alapján)
-            convertFromSourceCoordinates(lat, lon);
+        // Valós mérési pontosság (mock location esetén is átkerül az RTK eszköztől)
+        AppState.gpsAccuracy = position.coords.accuracy ?? null;
+        updateGpsAccuracyDisplay();
 
-            // GPS marker OL-ban – csak ha NEM screenCenter forrás (ott a + jelölő mutatja a pozíciót)
-            const activeSource = document.getElementById('gpsSource')?.value;
-            if (activeSource === CONSTANTS.COORD_SYSTEMS.SCREEN_CENTER) {
-                // screenCenter módban a GPS markert elrejtjük
-                if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(undefined);
-                updateCoordinateDisplay();
-                return;
-            }
+        // Koordináta konverzió (forrás alapján)
+        convertFromSourceCoordinates(lat, lon);
 
-            // GPS marker – DOM Overlay (canvas-mentes, Chrome-kompatibilis)
-            if (AppState.currentEOVY && AppState.currentEOVX) {
-                const eovCoord = [AppState.currentEOVY, AppState.currentEOVX];
-                if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(eovCoord);
-                // Követés mód: térkép közép folyamatosan a pozícióra kerül
-                if (AppState.gpsFollowEnabled) {
-                    AppState.map.getView().setCenter(eovCoord);
-                }
-            }
-
+        // GPS marker OL-ban – csak ha NEM screenCenter forrás (ott a + jelölő mutatja a pozíciót)
+        const activeSource = document.getElementById('gpsSource')?.value;
+        if (activeSource === CONSTANTS.COORD_SYSTEMS.SCREEN_CENTER) {
+            // screenCenter módban a GPS markert elrejtjük
+            if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(undefined);
             updateCoordinateDisplay();
-        },
-        (err) => {
-            Logger_GPS.error('GPS pozíció lekérési hiba', err);
-            showStatus('GPS hiba: ' + err.message, 'error');
-        },
-        {
-            enableHighAccuracy: CONSTANTS.GPS.ENABLE_HIGH_ACCURACY,
-            maximumAge: CONSTANTS.GPS.MAXIMUM_AGE
+            return;
         }
-    );
+
+        // GPS marker – DOM Overlay (canvas-mentes, Chrome-kompatibilis)
+        if (AppState.currentEOVY && AppState.currentEOVX) {
+            const eovCoord = [AppState.currentEOVY, AppState.currentEOVX];
+            if (AppState.gpsOverlay) AppState.gpsOverlay.setPosition(eovCoord);
+            // Követés mód: térkép közép folyamatosan a pozícióra kerül
+            if (AppState.gpsFollowEnabled) {
+                AppState.map.getView().setCenter(eovCoord);
+            }
+        }
+
+        updateCoordinateDisplay();
+    };
+
+    const onError = (err) => {
+        Logger_GPS.error('GPS pozíció lekérési hiba', err);
+        if (err.code === 1 /* PERMISSION_DENIED */) {
+            showGpsPermissionBanner();
+        } else {
+            showStatus('GPS hiba: ' + err.message, 'error');
+        }
+    };
+
+    function beginWatch() {
+        if (AppState.gpsWatchId !== null) return;
+        AppState.gpsWatchId = navigator.geolocation.watchPosition(onPosition, onError, watchOptions);
+    }
+
+    function handleDenied() {
+        Logger_GPS.warn('GPS engedély megtagadva');
+        showGpsPermissionBanner();
+    }
+
+    if (navigator.permissions) {
+        navigator.permissions.query({ name: 'geolocation' }).then(permResult => {
+            if (permResult.state === 'granted') {
+                beginWatch();
+            } else if (permResult.state === 'prompt') {
+                // Engedélykérő panel megjelenítése getCurrentPosition-nel
+                navigator.geolocation.getCurrentPosition(
+                    () => beginWatch(),
+                    (err) => {
+                        if (err.code === 1) handleDenied();
+                        else beginWatch(); // timeout vagy egyéb hiba – próbáljuk watchPosition-nel
+                    },
+                    { enableHighAccuracy: CONSTANTS.GPS.ENABLE_HIGH_ACCURACY, timeout: 15000 }
+                );
+            } else {
+                // denied
+                handleDenied();
+            }
+
+            // Figyelés: ha a felhasználó később megváltoztatja az engedélyt
+            permResult.onchange = () => {
+                if (permResult.state === 'granted') {
+                    hideGpsPermissionBanner();
+                    beginWatch();
+                } else if (permResult.state !== 'granted') {
+                    stopGPSTracking();
+                    showGpsPermissionBanner();
+                }
+            };
+        }).catch(() => {
+            // Permissions API nem elérhető (pl. régebbi Safari) – próbáljuk közvetlenül
+            navigator.geolocation.getCurrentPosition(
+                () => beginWatch(),
+                (err) => { if (err.code === 1) handleDenied(); else beginWatch(); },
+                { enableHighAccuracy: CONSTANTS.GPS.ENABLE_HIGH_ACCURACY, timeout: 15000 }
+            );
+        });
+    } else {
+        // Nincs Permissions API – getCurrentPosition mindig megmutatja a dialógust, ha szükséges
+        navigator.geolocation.getCurrentPosition(
+            () => beginWatch(),
+            (err) => { if (err.code === 1) handleDenied(); else beginWatch(); },
+            { enableHighAccuracy: CONSTANTS.GPS.ENABLE_HIGH_ACCURACY, timeout: 15000 }
+        );
+    }
 }
 
 
