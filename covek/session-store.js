@@ -118,8 +118,7 @@ function sessionLoad() {
             mf.set('_polygon',     polyFeature);
             mf.set('_cornerIndex', idx);
             mf.setStyle(getCornerMarkerStyle('yellow', markerSize));
-            AppState.cornerVectorSource.addFeature(mf);
-            AppState.allCornerMarkers.push(mf);
+            // Sarokpont markerek csak a kijelölt poligonhoz tartoznak, ne rajzoljunk minden poligonhoz!
         });
     });
 
@@ -155,8 +154,6 @@ function sessionReset() {
     if (AppState.cornerVectorSource) {
         AppState.cornerVectorSource.clear();
     }
-    AppState.allCornerMarkers = [];
-
     // Kijelölés és panelok nullazása
     if (typeof deselectAll === 'function') deselectAll();
 

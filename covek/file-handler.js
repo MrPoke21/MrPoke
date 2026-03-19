@@ -479,30 +479,7 @@ document.getElementById('shapeFile').addEventListener('change', async (e) => {
         });
         AppState.map.addLayer(AppState.shapeFileLayer);
 
-        // Sarokpont markerek az összes polygon csúcsánhoz
-        const zoom = AppState.map.getView().getZoom() || 10;
-        const markerSize = getCornerMarkerSize(zoom);
 
-        shapeSource.getFeatures().forEach(olFeature => {
-            if (olFeature.getGeometry().getType() !== 'Polygon') return;
-
-            const eovCorners = olFeature.get('eov_corners') || [];
-            const olRing     = olFeature.getGeometry().getCoordinates()[0]; // EPSG:23700
-
-            olRing.forEach((olCoord, index) => {
-                const cornerFeature = new ol.Feature({
-                    geometry: new ol.geom.Point(olCoord)
-                });
-
-                // EOV koordináta a sarokponthoz (transformer által számított, pontos)
-                const eovCoord = eovCorners[index] || null;
-                cornerFeature.set('_eovCoord', eovCoord);
-
-                cornerFeature.setStyle(getCornerMarkerStyle('yellow', markerSize));
-                AppState.cornerVectorSource.addFeature(cornerFeature);
-                AppState.allCornerMarkers.push(cornerFeature);
-            });
-        });
 
         // Zoom a réteg kiterjedésére
         const layerExtent = shapeSource.getExtent();

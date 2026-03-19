@@ -68,6 +68,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <!-- GPS centrálás gomb -->
             <button id="center-on-gps-btn" onclick="centerOnGPS()" title="Követés be/ki">&#x1F4CD;</button>
 
+            <!-- Szerkesztés (ceruza) gomb -->
+            <button id="toggle-edit-btn" title="Szerkesztés be/ki" style="position:absolute;right:16px;bottom:160px;z-index:1000;width:48px;height:48px;border-radius:50%;background:#222;color:#fff;border:2px solid #fff;font-size:28px;box-shadow:0 3px 10px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);cursor:pointer;">
+                <span class="pencil-icon">&#x270E;</span>
+            </button>
+
             <!-- GPS engedély banner -->
             <div id="gps-permission-banner" class="gps-permission-banner" style="display:none">
                 <span class="gps-permission-icon">📍</span>
@@ -143,6 +148,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div id="polygon-properties" class="polygon-properties">
                 <!-- Properties dinamikusan jelennek meg -->
             </div>
+            <button id="polygon-delete-btn" style="margin-top:12px;width:100%;background:#e53935;color:#fff;padding:8px 0;border:none;border-radius:4px;font-weight:bold;cursor:pointer;">Törlés</button>
         </div>
         
         <button class="hamburger" id="hamburgerBtn" aria-label="Menü">
@@ -218,6 +224,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <h3>🛰️ Grid státusz</h3>
                 <div id="gridStatus" style="font-size: 13px; line-height: 1.6;">
                     <div><strong>GPS mérési pontosság:</strong> <span id="gpsAccuracyValue">—</span></div>
+
                     <div><strong>Konverziós pontosság:</strong> <span id="gridAccuracy">—</span></div>
                     <div><strong>Forrás:</strong> <span id="gridSource">—</span></div>
                 </div>

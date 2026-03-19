@@ -20,8 +20,18 @@ const MoveState = {
 // ── Akció menü megjelenítése ──────────────────────────────────────────────────
 
 function showCornerActionMenu(feature) {
+
+    if (!window.editMode) return;
     const menu = document.getElementById('corner-action-menu');
     if (!menu || !AppState.map) return;
+// Vonal felezőpont gomb megjelenítése csak szerkesztés módban
+function showLineAddButton(feature) {
+    if (!window.editMode) return;
+    const btn = document.getElementById('line-add-btn');
+    if (!btn) return;
+    // Pozícionálás, megjelenítés logika (ha van)
+    btn.style.display = 'flex';
+}
 
     // A marker pixel pozíciója a térképen
     const olCoord = feature.getGeometry().getCoordinates();
@@ -92,9 +102,7 @@ function deleteCorner(cornerFeature) {
 
         // Sarokpont markerek törlése
         AppState.cornerVectorSource.clear();
-        AppState.allCornerMarkers = [];
-
-        // Maradék poligonok vonalait és markereit is újraépítjük
+        // Maradék poligonok vonalait újraépítjük
         rebuildLayerFromPolygons();
         deselectAll();
         Logger_Map.info('Háromszög poligon törölve (nem lehet 2 pontra csökkenteni)');
@@ -139,6 +147,8 @@ function startCornerMove(cornerFeature) {
         Logger_Map.warn('Mozgatás: nem található szülő poligon');
         return;
     }
+    // Távolságmérő egyenes eltüntetése
+    if (typeof clearDistanceVisualization === 'function') clearDistanceVisualization();
 
     const idx = findCornerIndexInPolygon(cornerFeature, polyFeature);
     if (idx === -1) {
@@ -203,6 +213,16 @@ function applyMovedCornerToPolygon(newOL, newEOV) {
 
     // Vonalszakaszok azonnali frissítése (live preview)
     rebuildAllLineSegments();
+
+    // Terület/kerület kijelzés frissítése
+    if (typeof displayPolygonInfo === 'function') {
+        // EOV sarokpontok
+        const eovCorners = polyFeature.get('eov_corners') || [];
+        // Poligon tulajdonságok (geometry nélkül)
+        const properties = Object.assign({}, polyFeature.getProperties());
+        delete properties.geometry;
+        displayPolygonInfo(eovCorners, properties);
+    }
 }
 
 function commitCornerMove() {
@@ -357,26 +377,7 @@ function rebuildCornerMarkers() {
     const markerSize = getCornerMarkerSize(zoom);
 
     AppState.cornerVectorSource.clear();
-    AppState.allCornerMarkers = [];
-
-    src.getFeatures()
-        .filter(f => f.getGeometry().getType() === 'Polygon')
-        .forEach(polyFeature => {
-            const ring = polyFeature.getGeometry().getCoordinates()[0];
-            const eovCorners = polyFeature.get('eov_corners') || [];
-
-            ring.forEach((olCoord, index) => {
-                const markerFeature = new ol.Feature({
-                    geometry: new ol.geom.Point([...olCoord])
-                });
-                markerFeature.set('_eovCoord', eovCorners[index] || null);
-                markerFeature.set('_polygon', polyFeature);
-                markerFeature.set('_cornerIndex', index);
-                markerFeature.setStyle(getCornerMarkerStyle('yellow', markerSize));
-                AppState.cornerVectorSource.addFeature(markerFeature);
-                AppState.allCornerMarkers.push(markerFeature);
-            });
-        });
+    // Sarokpont markerek csak a kijelölt poligonhoz tartoznak, ne rajzoljunk minden poligonhoz!
 }
 
 /**
