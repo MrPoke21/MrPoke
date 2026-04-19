@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cövek Felmérés</title>
+    
+    <!-- OpenLayers 8 (MePAR bundle library) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@8.2.0/ol.css" />
+    <script src="https://cdn.jsdelivr.net/npm/ol@8.2.0/dist/ol.js"></script>
+
+    <!-- Proj4.js – EPSG:23700 regisztrációhoz -->
+    <script src="https://unpkg.com/proj4@2.12.0/dist/proj4.js"></script>
+    
+    <!-- JSZip és shpjs (shapefile) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+    
+    <!-- GeoTIFF.js - HD72 grid betöltéshez szükséges -->
+    <script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8V2L090DYV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-8V2L090DYV');
+</script>
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-TNJHSTQP');</script>
+<!-- End Google Tag Manager -->
+ 
+
+</script>
+    <!-- Local styles -->
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TNJHSTQP"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+    <!-- Hiba megjelenítő panel -->
+    <div id="error-panel" class="error-panel" style="display: none;">
+        <div class="error-content">
+            <span id="error-icon">⚠️</span>
+            <div class="error-text">
+                <div id="error-title"></div>
+                <div id="error-message"></div>
+                <div id="error-value"></div>
+            </div>
+            <button id="error-close" class="error-close" aria-label="Bezárás">✕</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="map">
+            <!-- Képernyő közép kereszt (CSS fixed, nem OL feature) -->
+            <div id="screen-center-crosshair" style="display:none"></div>
+            <!-- GPS centrálás gomb -->
+            <button id="center-on-gps-btn" onclick="centerOnGPS()" title="Követés be/ki">&#x1F4CD;</button>
+
+            <!-- Szerkesztés (ceruza) gomb -->
+            <button id="toggle-edit-btn" title="Szerkesztés be/ki" style="position:absolute;right:16px;bottom:160px;z-index:1000;width:48px;height:48px;border-radius:50%;background:#222;color:#fff;border:2px solid #fff;font-size:28px;box-shadow:0 3px 10px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);cursor:pointer;">
+                <span class="pencil-icon">&#x270E;</span>
+            </button>
+
+            <!-- GPS engedély banner -->
+            <div id="gps-permission-banner" class="gps-permission-banner" style="display:none">
+                <span class="gps-permission-icon">📍</span>
+                <span class="gps-permission-text">A helymeghatározás le van tiltva. Engedélyezd a böngésző címsávában vagy a beállításokban, majd töltsd újra az oldalt.</span>
+                <button class="gps-permission-close" onclick="hideGpsPermissionBanner()" title="Bezárás">✕</button>
+            </div>
+
+            <!-- GPS mérési pontosság jelvény (jobb felső sarok) -->
+            <div id="gps-accuracy-badge" class="gps-accuracy-badge">📡 —</div>
+
+            <!-- Koordináta panel a térképen -->
+            <div class="coord-panel">
+                <div class="coord-row">
+                    <div class="coord-label">ETRF2000</div>
+                    <div class="coord-value">
+                        <span id="latETRF">—</span>, <span id="lonETRF">—</span>
+                    </div>
+                </div>
+                <div class="coord-row">
+                    <div class="coord-label">EOV</div>
+                    <div class="coord-value">
+                        Y: <span id="eovY">—</span> X: <span id="eovX">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sarokpont akció menü -->
+            <div id="corner-action-menu" style="display:none">
+                <button id="cam-btn-close" class="cam-close" onclick="hideCornerActionMenu()" title="Bezár">&#x2715;</button>
+                <button id="cam-btn-delete" onclick="onCornerActionDelete()">&#x1F5D1; Törlés</button>
+                <button id="cam-btn-move" onclick="onCornerActionMove()">&#x2725; Mozgatás</button>
+            </div>
+
+            <!-- Munkamenet mentés toast -->
+            <div id="session-save-toast"></div>
+
+            <!-- Poligon rajzolás sáv -->
+            <div id="draw-polygon-bar" style="display:none">
+                <span id="draw-status-text">Kattints a térképre</span>
+                <button id="draw-add-btn" onclick="addCurrentPositionPoint()">&#x1F4CD; Pont hozzáadása</button>
+                <button id="draw-undo-btn" onclick="undoDrawPoint()" disabled>&#x21A9; Visszavon</button>
+                <button id="draw-finish-btn" onclick="finishDrawPolygon()" disabled>&#x2713; Kész</button>
+                <button id="draw-cancel-btn" onclick="cancelDrawPolygon()">&#x2715; Mégse</button>
+            </div>
+
+            <!-- Vonal felezőpont hozzáadás gomb -->
+            <div id="line-add-btn" style="display:none" onclick="insertMidpointOnLine()">&#x2795; Hozzáad</div>
+
+            <!-- Mozgatás megerősítés sáv -->
+            <div id="corner-move-confirm" style="display:none">
+                <span>&#x1F4CD; Mozgatás aktív – követi a pillanatnyi pozíciót</span>
+                <button id="cmc-btn-ok" onclick="commitCornerMove()">&#x2713; OK</button>
+                <button id="cmc-btn-cancel" onclick="cancelCornerMove()">&#x2715; Mégse</button>
+            </div>
+        </div>
+        
+        <!-- Vonalas méretarány -->
+        <div id="scale-bar" class="scale-bar">
+            <div id="scale-bar-line" class="scale-bar-line"></div>
+            <div id="scale-bar-label" class="scale-bar-label">...</div>
+        </div>
+
+        <!-- Poligon információs panel az alján -->
+        <div id="polygon-info-panel" class="polygon-info-panel" hidden>
+            <div class="polygon-info-header">
+                <strong>📍 Poligon</strong>
+                <span id="polygon-area">—</span>
+            </div>
+            <div class="polygon-info-header" style="margin-top:2px; font-size: 12px;">
+                <span style="color:#aaa;">Kerület:</span>
+                <span id="polygon-perimeter">—</span>
+            </div>
+            <div id="polygon-properties" class="polygon-properties">
+                <!-- Properties dinamikusan jelennek meg -->
+            </div>
+            <button id="polygon-delete-btn" style="margin-top:12px;width:100%;background:#e53935;color:#fff;padding:8px 0;border:none;border-radius:4px;font-weight:bold;cursor:pointer;">Törlés</button>
+        </div>
+        
+        <button class="hamburger" id="hamburgerBtn" aria-label="Menü">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        
+        <div class="sidebar" id="sidebar">
+            <button class="sidebar-close" id="sidebarClose" aria-label="Bezárás">✕</button>
+            <h2>🗺️ cövek</h2>
+            <p style="margin: -15px 0 20px 0; font-size: 12px; color: #999; font-style: italic;">– áll mint a cövek</p>
+            
+            <!-- Shapefile upload -->
+            <div class="section">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <h3 style="margin: 0;">📁 Geometria import</h3>
+                    <button id="fileFormatHelpBtn" type="button" class="help-icon-btn" title="Támogatott fájltípusok" aria-label="Támogatott fájltípusok">
+                        ?
+                    </button>
+                </label>
+                <label for="shapeFile">ZIP (shapefile), SHP, vagy KML fájl</label>
+                <input type="file" id="shapeFile" accept=".zip,.shp,.kml" />
+                
+                <label for="shapeFileProjection" style="display: flex; align-items: center; gap: 8px;">
+                    Vetület
+                    <button id="projectionHelpBtn" type="button" class="help-icon-btn" title="Vetület információ" aria-label="Vetület információ">
+                        ?
+                    </button>
+                </label>
+                <select id="shapeFileProjection">
+                    <option value="wgs84">WGS84</option>
+                    <option value="etrf2000">ETRF2000</option>
+                    <option value="eov" selected>EOV</option>
+                </select>
+                <div id="shapeFileStatus"></div>
+            </div>
+
+            <!-- Forrás kiválasztása -->
+            <div class="section">
+                <h3>📡 Forrás</h3>
+                <label for="gpsSource" style="display: flex; align-items: center; gap: 8px;">
+                    Kiválasztott forrás
+                    <button id="sourceHelpBtn" type="button" class="help-icon-btn" title="Forrás információ" aria-label="Forrás információ">
+                        ?
+                    </button>
+                </label>
+                <select id="gpsSource">
+                    <option value="rtk">ETRF2000 RTK</option>
+                    <option value="screenCenter">Térkép középpontja</option>
+                </select>
+            </div>
+
+            <!-- Megjelenítés / rétegek -->
+            <div class="section">
+                <h3>🔍 Megjelenítés</h3>
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="autoZoomEnable" style="margin-right: 8px;">
+                    <span>Auto zoom műholdnézethez</span>
+                </label>
+            </div>
+
+            <!-- Rétegek -->
+            <div class="section">
+                <h3>🗂️ Rétegek</h3>
+                <div id="lc-base-layers"></div>
+                <hr style="margin:6px 0;border:none;border-top:1px solid #eee;">
+                <div id="lc-overlay-layers"></div>
+            </div>
+
+            <!-- Grid Status -->
+            <div class="section">
+                <h3>🛰️ Grid státusz</h3>
+                <div id="gridStatus" style="font-size: 13px; line-height: 1.6;">
+                    <div><strong>GPS mérési pontosság:</strong> <span id="gpsAccuracyValue">—</span></div>
+                    <div><strong>Konverziós pontosság:</strong> <span id="gridAccuracy">—</span></div>
+                    <div><strong>Forrás:</strong> <span id="gridSource">—</span></div>
+                </div>
+            </div>
+
+            <!-- Poligon rajzolás -->
+            <div class="section">
+                <h3>✏️ Poligon rajzolás</h3>
+                <button type="button" onclick="startDrawPolygon()" style="width:100%">
+                    ➕ Új poligon rajzolása
+                </button>
+                <button type="button" onclick="sessionReset()" style="width:100%; margin-top:6px; background:rgba(180,0,0,0.55); color:#fff;" title="Minden geometria és mentett munkamenet törlése">
+                    🗑️ Munkamenet törlése
+                </button>
+            </div>
+
+            <!-- Geometria export -->
+            <div class="section">
+                <h3>📤 Geometria export</h3>
+
+                <label for="exportFormat">Fájlformátum</label>
+                <select id="exportFormat">
+                    <option value="shp" selected>SHP (ZIP tömörítve)</option>
+                    <option value="kml">KML</option>
+                </select>
+
+                <label for="exportCRS">Koordináta rendszer</label>
+                <select id="exportCRS">
+                    <option value="eov" selected>EOV (EPSG:23700)</option>
+                    <option value="etrf2000">ETRF2000</option>
+                </select>
+
+                <button id="exportBtn" type="button" onclick="exportGeometries()" style="width:100%; margin-top:4px;">
+                    ⬇️ Letöltés
+                </button>
+                <div id="exportStatus" hidden></div>
+            </div>
+
+            <!-- About -->
+            <div class="section about-section">
+                <h3>ℹ️ Névjegy</h3>
+                <p>
+                    <strong>Cövek</strong><br>
+                    EOV koordináta transzformációs és shapefile feldolgozó alkalmazás
+                </p>
+                <p>
+                    <strong>Készítette:</strong> Mr. Poke<br>
+                    📧 <a href="mailto:mrpoke21@gmail.com">mrpoke21@gmail.com</a>
+                </p>
+                <p style="font-size: 12px; color: #999; margin-top: 12px;">
+                    <strong>Támogatta:</strong> GitHub Copilot AI Assistant<br>
+                    Az alkalmazás fejlesztésében mesterséges intelligencia segédlettel készült kódoptimalizálás, refaktorálás és felhasználói interfész fejlesztés terén.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vetület információs modal -->
+    <div id="projectionModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ℹ️ Vetület információ</h2>
+                <button class="modal-close" id="projectionModalClose" type="button" aria-label="Bezárás">✕</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Mit kell ezzel csinálni?</strong></p>
+                <p>A feltölteni kívánt <strong>shapefile-ban tárolt koordináták vetületét kell megadni</strong>. Ez a fájl metaadataiban vagy dokumentációjában szerepel.</p>
+                
+                <p><strong>🗺️ Vetület típusok:</strong></p>
+                <ul>
+                    <li><strong>EOV</strong> – Magyarország Egységes Vetületi Rendszere (1975). Ez a <strong>leggyakoribb</strong> választás magyar shapefile-ok esetén.</li>
+                    <li><strong>ETRF2000</strong> – Európai referencia rendszer. Közvetlenül használható EOV szülőrendszerként.</li>
+                    <li><strong>WGS84</strong> – GPS standart. <strong>Nagyon ritkán</strong> fordul elő magyar adatok esetén.</li>
+                </ul>
+                
+                <p><strong>⚠️ Hibás vetület választása esetén:</strong></p>
+                <p>Sikertelen koordináta-transzformáció vagy lehetséges Java hiba gátolhatja a feltöltést. Ha ez megtörténik:</p>
+                <ol>
+                    <li>A ZIP-fájlból <strong>töröld ki a .prj fájlt</strong> (az EOV vetületi definícióját tartalmazza, mely ütközhet egy másik vetülettel)</li>
+                    <li>Próbáld meg újra feltölteni a módosított ZIP fájlt</li>
+                </ol>
+                
+                <p><strong>💡 Tipp:</strong> Ha nem vagy biztos, a .prj fájlt szövegeditorban megnyitva megtekintheted az aktuális vetületi definíciót.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="projectionModalOK" type="button">Rendben</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fájl formátum információs modal -->
+    <div id="fileFormatModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ℹ️ Támogatott fájltípusok</h2>
+                <button class="modal-close" id="fileFormatModalClose" type="button" aria-label="Bezárás">✕</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Ez az alkalmazás három fájltípust támogat:</strong></p>
+                
+                <p><strong>📦 ZIP (Shapefile)</strong></p>
+                <p>A shapefile három file-ból áll, amelyet egy ZIP-be kell csomagolni:</p>
+                <ul>
+                    <li><strong>.shp</strong> – geometria (pontok, vonalak, poligonok)</li>
+                    <li><strong>.shx</strong> – index fájl (gyors hozzáféréshez szükséges)</li>
+                    <li><strong>.dbf</strong> – attribútum adatok (opcionális)</li>
+                </ul>
+                <p>🎯 <strong>Ajánlott formátum:</strong> Ez a legstabilabb és legzártabb megoldás.</p>
+                
+                <p><strong>📄 SHP (tömörítetlen shapefile)</strong></p>
+                <p>Ha csak az egyedi <strong>.shp fájlt</strong> töltöd fel, az alkalmazás automatikusan:</p>
+                <ul>
+                    <li>Generál egy dummy <strong>.dbf</strong> fájlt</li>
+                    <li>ZIP-be csomagol mindkettőt</li>
+                    <li>Feldolgozza a geometriát</li>
+                </ul>
+                <p>⚠️ <strong>Megjegyzés:</strong> Az attribútum adatok (név, terület, stb.) az info panelben nem jelennek meg.</p>
+                
+                <p><strong>🗺️ KML (Keyhole Markup Language)</strong></p>
+                <p>XML-alapú formátum, amely tartalmaz:</p>
+                <ul>
+                    <li>Point (pontok) – GPS koordinátákkal</li>
+                    <li>LineString (vonalak)</li>
+                    <li>Polygon (poligonok) – belső határokkal is</li>
+                    <li>Néveket és leírásokat</li>
+                </ul>
+                <p>✅ <strong>Előnye:</strong> Könnyen kezelhető, gyakran használt térkép alkalmazásokban (Google Maps, stb.)</p>
+                
+                <p><strong>💡 Koordináta rendszer:</strong></p>
+                <p>Az összes fájltípus esetén meg kell adni a <strong>bemeneti vetületet</strong> (vetület selektor). Az alkalmazás automatikusan EOV-ra transzformálja a koordinátákat.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="fileFormatModalOK" type="button">Rendben</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forrás információs modal -->
+    <div id="sourceModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ℹ️ Forrás információ</h2>
+                <button class="modal-close" id="sourceModalClose" type="button" aria-label="Bezárás">✕</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Mit kell ezzel csinálni?</strong></p>
+                <p>Válaszd ki a koordináta adatok <strong>forrásrendszerét</strong> – ahonnan az aktuális pozíciódat szeretnéd meghatározni.</p>
+                
+                <p><strong>📡 Forrás típusok:</strong></p>
+                <ul>
+                    <li><strong>ETRF2000 RTK</strong> – Valós idejű kinematikus GNSS, fix megoldás. Az RTK rendszerek bázis vetülete az ETRF2000, ezért az összes RTK-korrekcióval kapott koordináta ebbe a rendszerbe érkezik. <strong>RTK fix esetén ezt kell választani.</strong> Centiméteres pontosság Magyarország felett.</li>
+                    <li><strong>Térkép középpontja</strong> – A térképen megjelenített terület középpontja. <strong>Tesztelésre és tanulásra</strong> használható, ha nincs valós GPS adatod.</li>
+                </ul>
+                
+                <p><strong>💡 Tipp:</strong> Az ETRF2000 RTK a javasolt forrás, mivel a magyarországi GNSS hálózatok (pl. GNSSnet.hu, VITEL) ETRF2000 rendszerben adják ki a korrekciós adatokat.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="sourceModalOK" type="button">Rendben</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="logger.js"></script>
+    <script src="validation.js"></script>
+    <script src="eov-transformer.js"></script>
+    <script src="mathematics.js"></script>
+    <script src="ui-controls.js"></script>
+    <script src="mepar-layers.js"></script>
+    <script src="file-export.js"></script>
+    <script src="script.js"></script>
+    <script src="point-editor.js"></script>
+    <script src="session-store.js"></script>
+    <script src="file-handler.js"></script>
+</body>
+</html>

@@ -1,0 +1,1114 @@
+#toggle-edit-btn .pencil-icon {
+    color: #fff;
+    font-size: 28px;
+    transition: color 0.2s;
+}
+#toggle-edit-btn.edit-on .pencil-icon {
+    color: #e53935;
+    filter: drop-shadow(0 0 2px #e53935) drop-shadow(0 0 6px #e53935);
+}
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #f5f5f5;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+#map {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+/* Képernyő közép keresztjelölő – CSS-alapon, mindig pontosan középen */
+#screen-center-crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    pointer-events: none;
+    z-index: 600;
+}
+#screen-center-crosshair::before,
+#screen-center-crosshair::after {
+    content: '';
+    position: absolute;
+    background: red;
+    border-radius: 1px;
+}
+#screen-center-crosshair::before {
+    /* vízszintes vonal */
+    width: 100%;
+    height: 3px;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+#screen-center-crosshair::after {
+    /* függőleges vonal */
+    width: 3px;
+    height: 100%;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* GPS centrálás gomb */
+#center-on-gps-btn {
+    position: absolute;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px) + 56px);
+    right: 16px;
+    z-index: 999;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(74, 144, 226, 0.9);
+    color: white;
+    border: 2px solid white;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+    transition: background 0.2s, transform 0.15s;
+    touch-action: manipulation;
+}
+#center-on-gps-btn:active {
+    background: rgba(40, 100, 190, 0.95);
+    transform: scale(0.92);
+}
+#center-on-gps-btn.gps-follow-active {
+    background: rgba(30, 180, 80, 0.95);
+    box-shadow: 0 0 0 3px rgba(30, 180, 80, 0.4), 0 3px 10px rgba(0,0,0,0.4);
+}
+
+/* GPS pozíció overlay marker */
+#gps-overlay-marker {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(74, 144, 226, 0.85);
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+    pointer-events: none;
+    position: relative;
+}
+#gps-overlay-marker::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: white;
+}
+
+/* Vonalas méretarány */
+.scale-bar {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    pointer-events: none;
+}
+
+.scale-bar-line {
+    height: 6px;
+    min-width: 60px;
+    max-width: 200px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 2px solid rgba(0, 0, 0, 0.75);
+    border-top: none;
+    box-sizing: border-box;
+    transition: width 0.25s ease;
+}
+
+.scale-bar-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 3px #000, 0 0 6px #000;
+    white-space: nowrap;
+    font-family: 'Courier New', monospace;
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+}
+
+/* GPS pontosság jelvény – jobb felső sarok */
+.gps-accuracy-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 999;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    color: #fff;
+    background: rgba(80, 80, 80, 0.85);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+    transition: background 0.4s;
+}
+.gps-accuracy-badge.acc-red    { background: rgba(200, 30, 30, 0.88); }
+.gps-accuracy-badge.acc-yellow { background: rgba(180, 140, 0, 0.88); }
+.gps-accuracy-badge.acc-green  { background: rgba(30, 150, 60, 0.88); }
+.gps-accuracy-badge.acc-denied { background: rgba(100, 50, 0, 0.88); }
+
+/* GPS engedély banner */
+.gps-permission-banner {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(40, 20, 0, 0.93);
+    color: #ffd27a;
+    border: 1px solid rgba(255, 180, 60, 0.55);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    max-width: 90vw;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+}
+.gps-permission-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.gps-permission-text {
+    flex: 1;
+    line-height: 1.4;
+}
+.gps-permission-close {
+    background: none;
+    border: none;
+    color: #ffd27a;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+.gps-permission-close:hover { opacity: 1; }
+
+/* Koordináta panel a térképen */
+.coord-panel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 6px;
+    padding: 12px;
+    width: fit-content;
+    z-index: 999;
+    font-size: 14px;
+    backdrop-filter: blur(2px);
+    cursor: grab;
+    transition: box-shadow 0.2s;
+}
+
+.coord-panel:active {
+    cursor: grabbing;
+}
+
+.coord-panel .coord-row {
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    color: white;
+    font-family: 'Courier New', monospace;
+}
+
+.coord-panel .coord-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Hiba megjelenítő panel */
+.error-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #d32f2f 0%, #f57c00 100%);
+    color: white;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.error-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+#error-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.error-text {
+    flex: 1;
+}
+
+#error-title {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+#error-message {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 4px;
+}
+
+#error-value {
+    font-family: 'Courier New', monospace;
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.error-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 12px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.error-close:hover {
+    opacity: 1;
+}
+
+
+.coord-panel .coord-label {
+    color: #a0d8ff;
+    font-weight: 600;
+    margin-bottom: 2px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.coord-panel .coord-value {
+    color: #ffffff;
+    word-break: break-all;
+    line-height: 1.3;
+    font-size: 14px;
+}
+
+/* Poligon információs panel a tábla mellett, felül */
+.polygon-info-panel {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 8px;
+    padding: 12px 16px;
+    z-index: 998;
+    font-family: 'Courier New', monospace;
+    backdrop-filter: blur(2px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    max-width: 300px;
+    font-size: 13px;
+    color: #ddd;
+}
+
+.polygon-info-header {
+    color: #ff6b35;
+    font-weight: bold;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #555;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#polygon-area {
+    color: #ff6b35;
+    font-weight: bold;
+}
+
+.polygon-properties {
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.polygon-properties > div {
+    margin-bottom: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.polygon-properties strong {
+    color: #a0d8ff;
+}
+
+.sidebar {
+    width: 350px;
+    background: white;
+    overflow-y: auto;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    box-sizing: border-box;
+    transition: transform 0.3s ease-in-out;
+    position: relative;
+}
+
+.sidebar.closed {
+    transform: translateX(-100%);
+}
+
+.sidebar-close {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    z-index: 1001;
+    pointer-events: auto;
+}
+
+.sidebar-close:hover {
+    color: #333;
+}
+
+.hamburger {
+    display: none;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    flex-direction: column;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.hamburger span {
+    width: 25px;
+    height: 3px;
+    background: #333;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
+}
+
+.sidebar h2 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.section:last-child {
+    border-bottom: none;
+}
+
+/* About section styling */
+.about-section {
+    margin-top: 40px !important;
+    padding-top: 20px !important;
+    padding-bottom: 10px !important;
+    border-top: 2px solid #ddd !important;
+    border-bottom: none !important;
+    background: linear-gradient(135deg, rgba(74, 144, 226, 0.05) 0%, rgba(0, 102, 204, 0.03) 100%);
+    border-radius: 6px;
+    padding: 15px !important;
+    font-size: 13px;
+}
+
+.about-section h3 {
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+    color: #0066cc;
+    font-size: 14px;
+}
+
+.about-section p {
+    margin: 8px 0;
+    line-height: 1.5;
+    color: #555;
+}
+
+.about-section a {
+    color: #0066cc;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.about-section a:hover {
+    color: #0052a3;
+    text-decoration: underline;
+}
+
+.section h3 {
+    margin: 0 0 12px 0;
+    color: #666;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* Sidebar .coord-row (ne az átlátszó panel) */
+.sidebar .coord-row {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+}
+
+.sidebar .coord-label {
+    color: #666;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.sidebar .coord-value {
+    color: #333;
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+input[type="file"],
+select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+label {
+    display: block;
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+button {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+button:hover {
+    background: #357abd;
+}
+
+.status {
+    padding: 10px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.error {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.warning {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.success {
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
+/* Mobil responsz */
+@media (max-width: 768px) {
+    .container {
+        position: relative;
+    }
+    
+    .hamburger {
+        display: flex;
+    }
+    
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 85vw;
+        height: 100vh;
+        border-top: none;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+        z-index: 999;
+        padding-top: 50px;
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.closed {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar:not(.closed) {
+        transform: translateX(0);
+    }
+    
+    .sidebar-close {
+        display: block;
+    }
+    
+    .coord-panel {
+        top: 80px;
+        bottom: auto;
+        left: 10px;
+        right: 10px;
+        width: fit-content;
+        max-width: calc(100% - 20px);
+        padding: 8px;
+    }
+    
+    .coord-panel .coord-row {
+        display: block;
+        margin-right: 0;
+        margin-bottom: 4px;
+        padding: 2px 4px;
+        font-size: 10px;
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .coord-panel .coord-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .coord-panel .coord-label {
+        font-size: 9px;
+        margin-bottom: 1px;
+    }
+    
+    .coord-panel .coord-value {
+        font-size: 10px;
+    }
+}
+
+/* Térképkontrol stílus */
+.leaflet-control-layers {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-radius: 6px !important;
+    border: 2px solid #ccc !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+.leaflet-control-layers-list {
+    padding: 6px 10px !important;
+}
+
+.leaflet-control-layers label {
+    margin-bottom: 8px;
+    display: block;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+}
+
+.leaflet-control-layers input[type="radio"],
+.leaflet-control-layers input[type="checkbox"] {
+    margin-right: 6px;
+}
+/* ============ MODAL & HELP ICON STYLES ============ */
+
+.help-icon-btn {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    padding: 0;
+    border: 2px solid #0066cc;
+    border-radius: 50%;
+    background: #e6f2ff;
+    color: #0066cc;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.help-icon-btn:hover {
+    background: #0066cc;
+    color: white;
+    box-shadow: 0 0 8px rgba(0, 102, 204, 0.4);
+    transform: scale(1.1);
+}
+
+.help-icon-btn:active {
+    transform: scale(0.95);
+}
+
+/* Modal backdrop */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Modal content box */
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #555;
+}
+
+.modal-body p {
+    margin: 10px 0;
+}
+
+.modal-body ul,
+.modal-body ol {
+    margin: 10px 0 10px 20px;
+    padding: 0;
+}
+
+.modal-body li {
+    margin-bottom: 8px;
+}
+
+.modal-body strong {
+    color: #333;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-primary {
+    background: #0066cc;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: #0052a3;
+    box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+/* Mobile modal adjustments */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .modal-header {
+        padding: 16px;
+    }
+    
+    .modal-header h2 {
+        font-size: 18px;
+    }
+    
+    .modal-body {
+        padding: 16px;
+        font-size: 13px;
+    }
+    
+    .modal-footer {
+        padding: 16px;
+    }
+}
+
+/* ── Munkamenet toast ───────────────────────────────────────────────────────────── */
+
+#session-save-toast {
+    position: absolute;
+    z-index: 2000;
+    bottom: 18px;
+    right: 14px;
+    background: rgba(20, 20, 20, 0.88);
+    color: #fff;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    white-space: nowrap;
+}
+
+#session-save-toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ── Poligon rajzolás sáv ────────────────────────────────────────────────────────────── */
+
+#draw-polygon-bar {
+    position: absolute;
+    z-index: 1500;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: rgba(20, 20, 20, 0.93);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 8px 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: all;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: calc(100% - 20px);
+}
+
+#draw-status-text {
+    flex: 1 1 100%;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 4px;
+}
+
+#draw-polygon-bar button {
+    border: none;
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: #fff;
+}
+
+#draw-polygon-bar button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+#draw-finish-btn  { background: #2e7d32; }
+#draw-finish-btn:not(:disabled):hover  { background: #388e3c; }
+#draw-add-btn     { background: #1565c0; }
+#draw-add-btn:hover     { background: #1976d2; }
+#draw-undo-btn    { background: rgba(255,255,255,0.12); }
+#draw-undo-btn:not(:disabled):hover    { background: rgba(255,152,0,0.5); }
+#draw-cancel-btn  { background: rgba(180,0,0,0.45); }
+#draw-cancel-btn:hover  { background: rgba(220,0,0,0.6); }
+
+/* Rajzolás mód kurzor */
+#map.draw-active { cursor: crosshair !important; }
+#map.draw-active canvas { cursor: crosshair !important; }
+
+/* ── Vonal Hozzáad gomb ────────────────────────────────────────────────────────────── */
+
+#line-add-btn {
+    position: absolute;
+    z-index: 1500;
+    display: none;
+    background: rgba(30, 30, 30, 0.93);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 7px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.45);
+    white-space: nowrap;
+    pointer-events: all;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+#line-add-btn:hover {
+    background: rgba(46,125,50,0.92);
+}
+
+/* ── Sarokpont akció menü ───────────────────────────────────────────────────── */
+
+#corner-action-menu {
+    position: absolute;
+    z-index: 1500;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    min-width: 145px;
+    pointer-events: all;
+}
+
+#corner-action-menu button {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 7px 12px;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+#corner-action-menu button:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+#corner-action-menu .cam-close {
+    align-self: flex-end;
+    padding: 2px 7px;
+    font-size: 11px;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+}
+
+#corner-action-menu .cam-close:hover {
+    color: #fff;
+    background: rgba(255,0,0,0.25);
+}
+
+/* ── Mozgatás megerősítés sáv ───────────────────────────────────────────────── */
+
+#corner-move-confirm {
+    position: absolute;
+    z-index: 1500;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 10px 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: all;
+}
+
+#corner-move-confirm button {
+    border: none;
+    border-radius: 5px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+#cmc-btn-ok {
+    background: #2e7d32;
+    color: #fff;
+}
+
+#cmc-btn-ok:hover {
+    background: #388e3c;
+}
+
+#cmc-btn-cancel {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+}
+
+#cmc-btn-cancel:hover {
+    background: rgba(255,0,0,0.3);
+}
