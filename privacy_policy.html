@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adatvédelmi Nyilatkozat – Cövek</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #333;
+            background: #f9f9f9;
+        }
+        .container {
+            max-width: 860px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 48px 56px;
+        }
+        h1 {
+            font-size: 2em;
+            color: #1a73e8;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 0.95em;
+            margin-bottom: 36px;
+        }
+        h2 {
+            font-size: 1.2em;
+            color: #1a73e8;
+            margin-top: 36px;
+            margin-bottom: 10px;
+            border-left: 4px solid #1a73e8;
+            padding-left: 12px;
+        }
+        p {
+            margin-bottom: 12px;
+        }
+        ul {
+            margin: 8px 0 14px 24px;
+        }
+        ul li {
+            margin-bottom: 6px;
+        }
+        .highlight-box {
+            background: #e8f0fe;
+            border-left: 4px solid #1a73e8;
+            border-radius: 4px;
+            padding: 14px 18px;
+            margin: 20px 0;
+        }
+        .highlight-box p {
+            margin: 0;
+            color: #1a55cc;
+            font-weight: 500;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            font-size: 0.95em;
+        }
+        th {
+            background: #f0f4ff;
+            color: #1a55cc;
+            font-weight: 600;
+        }
+        tr:nth-child(even) td {
+            background: #fafafa;
+        }
+        a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .footer {
+            margin-top: 48px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #888;
+            font-size: 0.88em;
+            text-align: center;
+        }
+        @media (max-width: 640px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+                padding: 28px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <h1>Adatvédelmi Nyilatkozat</h1>
+    <p class="subtitle">Alkalmazás neve: <strong>Cövek</strong> &nbsp;|&nbsp; Csomagnév: <code>com.kotvics.covek</code> &nbsp;|&nbsp; Hatályos: 2026. május 8-tól</p>
+
+    <div class="highlight-box">
+        <p>&#9432;&nbsp; A Cövek alkalmazás <strong>semmilyen adatot nem gyűjt, nem tárol és nem oszt meg harmadik féllel.</strong> Az alkalmazás kizárólag a helyi eszközön működik, és nem rendelkezik saját szerverrel vagy adatbázissal.</p>
+    </div>
+
+    <h2>1. Az alkalmazásról</h2>
+    <p>A <strong>Cövek</strong> egy Android-alapú geodéziai mérőprogram, amely GNSS vevőkészülékekkel (USB, Bluetooth, TCP/IP) kommunikál, NTRIP protokollon keresztül RTK korrekciót kezel, és helyszíni mérési feladatokat (vonalmérés, pontfelvétel, koordináta-transzformáció, SHP fájlkezelés) tesz lehetővé.</p>
+
+    <h2>2. Gyűjtött és kezelt adatok</h2>
+    <p>Az alkalmazás az alábbi adatfajták valamelyikéhez férhet hozzá az eszközön, kizárólag a funkció működéséhez:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Adatfajta</th>
+                <th>Felhasználás célja</th>
+                <th>Tárolás / Továbbítás</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Helyadat (GPS koordináták)</td>
+                <td>Mérési pontok megjelenítése, vonalmérés, EOV transzformáció</td>
+                <td>Csak helyben, a felhasználó által mentett SHP/fájlban</td>
+            </tr>
+            <tr>
+                <td>Bluetooth-eszközök neve / MAC-címe</td>
+                <td>GNSS vevőhöz való csatlakozáshoz</td>
+                <td>Nem tárolódik, munkamenet alatt él</td>
+            </tr>
+            <tr>
+                <td>USB-eszköz azonosítója</td>
+                <td>USB-s GNSS vevőhöz való csatlakozáshoz</td>
+                <td>Nem tárolódik</td>
+            </tr>
+            <tr>
+                <td>NTRIP szerver adatok (host, port, mountpoint, jelszó)</td>
+                <td>RTK korrekciós adatfolyam fogadása</td>
+                <td>Csak az eszközön, SharedPreferences-ben titkosítatlanul – nem kerül szerverre</td>
+            </tr>
+            <tr>
+                <td>NMEA mondatok</td>
+                <td>Helyzeti adatok kinyerése a GNSS vevőből</td>
+                <td>Memóriában feldolgozva, nem tárolódik automatikusan</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Internet-hozzáférés</h2>
+    <p>Az alkalmazás internet-kapcsolatot kizárólag az alábbi esetekben használ:</p>
+    <ul>
+        <li><strong>NTRIP-kliens mód:</strong> a felhasználó által megadott NTRIP Caster szerverre csatlakozik RTK korrekciós adatok letöltéséhez.</li>
+        <li><strong>TCP-kliens / TCP-szerver mód:</strong> helyi hálózaton (LAN/WLAN) keresztül más eszközökkel való kommunikáció.</li>
+    </ul>
+    <p>Az alkalmazás nem küld adatot fejlesztői, hirdetési vagy analitikai szerverekre.</p>
+
+    <h2>4. Szükséges engedélyek</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Engedély</th>
+                <th>Indoklás</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>ACCESS_FINE_LOCATION</code><br><code>ACCESS_COARSE_LOCATION</code></td>
+                <td>Bluetooth-eszközök keresése (Android 11 és alatta), illetve ha a belső GPS is használatos</td>
+            </tr>
+            <tr>
+                <td><code>BLUETOOTH_CONNECT</code><br><code>BLUETOOTH_SCAN</code></td>
+                <td>GNSS vevőhöz való Bluetooth SPP csatlakozáshoz</td>
+            </tr>
+            <tr>
+                <td><code>INTERNET</code></td>
+                <td>NTRIP és TCP kommunikáció</td>
+            </tr>
+            <tr>
+                <td><code>FOREGROUND_SERVICE</code><br><code>FOREGROUND_SERVICE_DATA_SYNC</code></td>
+                <td>A GNSS szolgáltatás háttérben futtatásához, hogy a kapcsolat fennmaradjon</td>
+            </tr>
+            <tr>
+                <td><code>POST_NOTIFICATIONS</code></td>
+                <td>Az előtér-szolgáltatás értesítésének megjelenítéséhez (Android 13+)</td>
+            </tr>
+            <tr>
+                <td>USB Host</td>
+                <td>USB-s GNSS eszközök kezeléséhez</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>5. Harmadik féltől származó könyvtárak</h2>
+    <p>Az alkalmazás az alábbi nyílt forráskódú könyvtárakat használja. Ezek a könyvtárak szintén nem gyűjtenek felhasználói adatot:</p>
+    <ul>
+        <li><strong>usb-serial-for-android</strong> (mik3y) – USB soros kommunikáció</li>
+        <li><strong>AndroidX / Jetpack</strong> könyvtárak – lifecycle, DrawerLayout, LocalBroadcastManager</li>
+        <li><strong>Kotlin Coroutines</strong> – aszinkron feladatkezelés</li>
+    </ul>
+    <p>Az alkalmazás nem tartalmaz hirdetési SDK-t, elemzési (analytics) SDK-t, vagy crash-reporting szolgáltatást.</p>
+
+    <h2>6. Adatbiztonság</h2>
+    <p>Mivel az alkalmazás nem küld adatot külső szerverekre, az adatszivárgás kockázata minimális. A felhasználó által létrehozott fájlok (pl. SHP) az eszköz tárhelyére kerülnek, és azok védelméért az Android fájlrendszer biztonsági mechanizmusai felelnek.</p>
+    <p>Az NTRIP szerver jelszava az eszközön, a SharedPreferences tárolóban marad. Javasolt a készüléken képernyőzár használata.</p>
+
+    <h2>7. Gyermekek adatai</h2>
+    <p>Az alkalmazás nem 13 éven aluli felhasználóknak szól, és nem gyűjt tudatosan semmilyen adatot kiskorúaktól.</p>
+
+    <h2>8. Változások az adatvédelmi nyilatkozatban</h2>
+    <p>Ha az adatvédelmi nyilatkozat változik, az új verzió ezen az oldalon kerül közzétételre a hatályba lépés dátumával. Jelentős változás esetén az alkalmazáson belüli értesítést is küldünk.</p>
+
+    <h2>9. Kapcsolat</h2>
+    <p>Ha az adatvédelmi nyilatkozattal kapcsolatban kérdése van, vegye fel a kapcsolatot:</p>
+    <ul>
+        <li><strong>Fejlesztő:</strong> Kotvics</li>
+        <li><strong>E-mail:</strong> <a href="mailto:mrpoke21@gmail.com.com">mrpoke21@gmail.com.com</a></li>
+    </ul>
+
+    <div class="footer">
+        <p>&copy; 2026 Kotvics &nbsp;|&nbsp; Cövek alkalmazás &nbsp;|&nbsp; <code>com.kotvics.covek</code></p>
+        <p>Ez a nyilatkozat a Google Play Developer Program Policy követelményeinek megfelelően készült.</p>
+    </div>
+
+</div>
+</body>
+</html>
+
