@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<title>VT Editor — core v2026-09-22.3</title>
+<style>
+  #cwin { display:none; position:fixed; right:16px; top:70px; z-index:50; background:#1a1a1a;
+    border:1px solid #4a4; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,.6); min-width:140px; }
+  #cwin_head { background:#243; padding:4px 8px; font-size:12px; cursor:move; display:flex; justify-content:space-between; gap:8px; }
+  #cwin_head button { padding:0 6px; font-size:11px; }
+  #cwin_canvas { display:block; }
+  body { font-family: system-ui, sans-serif; background: #222; color: #ddd; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 6px 12px; background: #111; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  h1 { font-size: 14px; margin: 0; color: #9c9; }
+  select, input, button { background: #333; color: #ddd; border: 1px solid #555; border-radius: 4px; padding: 3px 6px; font-size: 12px; }
+  button { cursor: pointer; } button:hover { background: #3a5a3a; }
+  #drop { border: 1px dashed #555; border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 12px; }
+  #drop.hover { border-color: #9c9; background: #1a2a1a; }
+  main { flex: 1; display: flex; min-height: 0; }
+  #tree { width: 210px; background: #1a1a1a; overflow: auto; font-size: 12px; padding: 6px; }
+  #tree div.obj { padding: 2px 4px; cursor: pointer; border-radius: 3px; white-space: nowrap; }
+  #tree div.obj.sel { background: #2a4a2a; color: #cfc; }
+  #tree div.obj:hover { background: #2a2a2a; }
+  #center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: auto; }
+  #screen { background: #000; cursor: default; }
+  #props { width: 250px; background: #1a1a1a; padding: 8px; font-size: 12px; overflow: auto; }
+  #props label { display: block; margin: 6px 0 2px; color: #999; }
+  #props input, #props select { width: 100%; box-sizing: border-box; }
+  #log { height: 70px; overflow: auto; background: #111; padding: 4px 10px; font: 10px monospace; color: #888; }
+  .sec { color: #6c6; margin: 8px 0 2px; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AgISO Pool Editor</h1>
+  <div id="drop">.iop / .xml betöltés</div><select id="addSel"><option value="">+ Új elem…</option><option value="datamask">Adatmaszk</option><option value="softkeymask">SoftKeyMaszk</option><option value="container">Container</option><option value="key">Key</option><option value="button">Button</option><option value="outputstring">OutputString</option><option value="outputnumber">OutputNumber</option><option value="inputnumber">InputNumber</option><option value="outputrectangle">OutputRectangle</option><option value="outputline">OutputLine</option><option value="fontattributes">FontAttributes</option><option value="lineattributes">LineAttributes</option><option value="fillattributes">FillAttributes</option><option value="stringvariable">StringVariable</option><option value="numbervariable">NumberVariable</option></select>
+  <input type="file" id="file" accept=".iop,.xml" style="display:none">
+  <button id="btnExport">Export .iop</button>
+  <button id="btnExportXml">XML mentés</button>
+  <button id="btnInfo">Pool infó</button>
+  <button id="btnNew">Új pool</button>
+  <button id="btnPng" title="Kép importálása a kijelölt PictureGraphic-ba">PNG</button>
+  <button id="btnMerge" title="Betöltött .iop szövegeit az aktuális nyelvhez rendeli">Nyelv import</button>
+  <label>Nyelv: <select id="langSel"></select></label>
+  <label>Mask: <select id="zoomSel" title="Nagyítás">
+    <option value="1" selected>1×</option>
+    <option value="1.5">1.5×</option>
+    <option value="2">2×</option>
+    <option value="3">3×</option>
+    <option value="4">4×</option>
+  </select>
+  <select id="vtSize" title="VT kijelző mérete">
+    <option value="480x480">480×480</option>
+    <option value="640x480">640×480</option>
+    <option value="800x480">800×480</option>
+    <option value="320x240">320×240</option>
+    <option value="480x272">480×272</option>
+    <option value="240x240">240×240</option>
+  </select>
+  <select id="maskSel"></select></label>
+  <span id="selInfo" style="color:#888;font-size:11px"></span>
+</header>
+<main>
+  <div id="tree"></div>
+  <div id="center"><canvas id="screen" width="480" height="480"></canvas></div>
+  <div id="props"><div class="sec">Tulajdonságok</div><div id="propBody" style="color:#666">Nincs kijelölés</div></div>
+</main>
+<div id="log">Kész.</div>
+<script src="editor_core.js"></script><span style="margin-left:10px;color:#9cf;font-size:11px">core v2026-09-22.3 (statikus)</span><span id="coreVer" style="color:#fc9;font-size:11px"></span>
+<div id="cwin">
+  <div id="cwin_head"><span id="cwin_title">Konténer</span><button id="cwin_close">✕</button></div>
+  <canvas id="cwin_canvas" width="240" height="160"></canvas>
+</div>
+</body>
+</html>
